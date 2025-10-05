@@ -357,7 +357,7 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         bit_count = dib_hdr.biBitCount;
         is_bottom_up = (dib_hdr.biHeight < 0);
 
-        ESP_LOGW(TAG,"read bmp width is %d,height is %d", width, height);
+        // ESP_LOGW(TAG,"read bmp width is %d,height is %d", width, height);
     }
 
     //40byte DIB Header
@@ -383,7 +383,7 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         bit_count = dib_hdr.biBitCount;
         is_bottom_up = (dib_hdr.biHeight < 0);
 
-        ESP_LOGW(TAG,"read bmp width is %d,height is %d", width, height);
+        // ESP_LOGW(TAG,"read bmp width is %d,height is %d", width, height);
     }
     else 
     {

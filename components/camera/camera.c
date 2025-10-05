@@ -108,7 +108,7 @@ esp_err_t  bsp_camera_init(void)
     config.pin_href = CAMERA_PIN_HREF;
     config.pin_sccb_sda = -1;                       // 这里写-1 表示使用已经初始化的I2C接口
     config.pin_sccb_scl = -1;
-    config.sccb_i2c_port = -1;                      //修改了内部源码，确保deinit时不删除camera 的i2c device
+    config.sccb_i2c_port = 0;                      //修改了内部源码，确保deinit时不删除camera 的i2c device
     config.pin_pwdn = CAMERA_PIN_PWDN;
     config.pin_reset = CAMERA_PIN_RESET;
     config.xclk_freq_hz = XCLK_FREQ_HZ;
@@ -207,7 +207,7 @@ static void task_process_lcd(void *arg)
 
             if(lvgl_port_lock(0)==true)
             {
-                ESP_LOGI(TAG,"lcd task :take lvgl mutex success");
+                // ESP_LOGI(TAG,"lcd task :take lvgl mutex success");
                 camera_img.data=buf_info.data;
                 
                 lv_img_set_src(camera_display, &camera_img);
@@ -239,10 +239,10 @@ static void task_process_lcd(void *arg)
             //刷新/保存当前帧之后再释放信号量，防止出现竞争情况
             if(xSemaphoreGive(frame_buf_sem[buf_info.buf_index])!=pdTRUE)
             {
-                ESP_LOGI(TAG," give fram_buf_sem fail ");
+                ESP_LOGE(TAG," give fram_buf_sem fail ");
             }
-            else 
-                ESP_LOGI(TAG," give fram_buf_sem success ");
+            // else 
+                // ESP_LOGI(TAG," give fram_buf_sem success ");
 
             
         }
@@ -279,11 +279,11 @@ static void task_process_camera(void *arg)
         memcpy(in_image.data, frame->buf, 320 * 240 * 2);
         esp_camera_fb_return(frame);  // 早释放原帧
 
-        ESP_LOGI(TAG,"take fram_buf_sem ing ");
+        // ESP_LOGI(TAG,"take fram_buf_sem ing ");
         // 等待一个可用缓冲（take 信号量）
         if (xSemaphoreTake(frame_buf_sem[current_buf_index], portMAX_DELAY) == pdTRUE) 
         {
-            ESP_LOGI(TAG,"take fram_buf_sem success ");
+            // ESP_LOGI(TAG,"take fram_buf_sem success ");
             esp_imgfx_data_t out_image = {.data_len = 240 * 320 * 2, .data = frame_out_buf[current_buf_index]};
 
             // 旋转
@@ -308,7 +308,7 @@ void app_camera_lcd(void)
     app_camera_double_buff_init();
     
 
-    xTaskCreatePinnedToCore(task_process_camera, "task_process_camera", 3 * 1024, NULL, 5, &process_camera_handle, 0);
+    xTaskCreatePinnedToCore(task_process_camera, "task_process_camera", 3 * 1024, NULL, 5, &process_camera_handle, 1);
     xTaskCreatePinnedToCore(task_process_lcd, "task_process_lcd", 4 * 1024, NULL, 5, &process_lcd_handle, 0);
 
     ESP_LOGI(TAG,"create camera and lcd task success ");
