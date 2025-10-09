@@ -79,9 +79,6 @@ void wifi_task(void *Par)
         return;
     }
 
-    // 初始化 NVS（全局，一次性）
-    ESP_ERROR_CHECK(nvs_flash_init());
-
     // 创建默认事件循环（WiFi 系统事件）
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();

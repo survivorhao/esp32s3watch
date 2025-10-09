@@ -10,6 +10,8 @@
 #include    <errno.h>
 #include    <string.h>
 #include    "esp_lvgl_port.h"
+#include    "nvs_flash.h"
+
 
 #include    "ui.h"
 #include    "bsp_driver.h"
@@ -47,6 +49,10 @@ TaskHandle_t process_lcd_handle=NULL;
 //读取camera frame任务
 TaskHandle_t process_camera_handle=NULL;
 
+uint8_t first_save_camera_frame_flag=1;
+
+// 生成文件名（使用计数器递增）
+int  camera_frame_save_file_counter;
 
 
 // 定义缓冲结构体（用于队列传递）
@@ -172,7 +178,22 @@ void bsp_camera_deinit(void)
     frame_buf_sem[0]=NULL;
     frame_buf_sem[1]=NULL;
 
+
+    //保存当前帧序号
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open("camera_fra", NVS_READWRITE, &handle);
+    if (err != ESP_OK) 
+    {
+       ESP_LOGE(TAG,"nvs open namespace fail ");
+       return ;
+    }
+    nvs_set_i32(handle, "frame_seq", camera_frame_save_file_counter);
+    nvs_commit(handle);
+    nvs_close(handle);
+
     ESP_LOGI(TAG,"camera application deinit success");
+
+
 
 
 }
@@ -209,9 +230,10 @@ static void task_process_lcd(void *arg)
             {
                 // ESP_LOGI(TAG,"lcd task :take lvgl mutex success");
                 camera_img.data=buf_info.data;
-                
-                lv_img_set_src(camera_display, &camera_img);
-
+                if(camera_display !=NULL)
+                {
+                    lv_img_set_src(camera_display, &camera_img);
+                }
                 lvgl_port_unlock();
             }
             else
@@ -365,21 +387,28 @@ void app_camera_double_buff_init(void)
 // void save_frame_to_bmp(const esp_imgfx_data_t* out_image) 
 void save_frame_to_bmp(const char* out_image)
 {
-    // 检查并创建目录
-    struct stat st;
-    if (stat("/sdcard/camera", &st) != 0) 
+
+
+    //第一次发送保存帧请求
+    if(first_save_camera_frame_flag==1)
     {
-        if (mkdir("/sdcard/camera", 0777) != 0) 
+        first_save_camera_frame_flag=0;
+
+        // 检查并创建目录
+        struct stat st;
+        if (stat("/sdcard/camera", &st) != 0) 
         {
-            ESP_LOGE(TAG, "Failed to create directory /sdcard/camera");
-            return;
+            if (mkdir("/sdcard/camera", 0777) != 0) 
+            {
+                ESP_LOGE(TAG, "Failed to create directory /sdcard/camera");
+                return;
+            }
         }
+
     }
 
-    // 生成文件名（使用计数器递增）
-    static int file_counter = 0;
     char filename[64];
-    snprintf(filename, sizeof(filename), "/sdcard/camera/frame_%03d.bmp", file_counter++);
+    snprintf(filename, sizeof(filename), "/sdcard/camera/frame_%04d.bmp", camera_frame_save_file_counter++);
 
     // 打开文件,如果存在文件则清空
     FILE* f = fopen(filename, "wb");

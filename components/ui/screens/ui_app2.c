@@ -8,6 +8,8 @@
 lv_obj_t * ui_app2 = NULL;
 lv_obj_t * ui_Button10 = NULL;
 lv_obj_t * ui_cameraImage = NULL;
+lv_obj_t * ui_Button11 = NULL;
+lv_obj_t * ui_calenderImage = NULL;
 
 static const char *TAG="ui_app2";
 
@@ -32,6 +34,19 @@ void ui_event_Button10(lv_event_t * e)
         ESP_LOGI(TAG,"change screen to ui_camera");
         
         _ui_screen_change(&ui_camera, LV_SCR_LOAD_ANIM_NONE, 150, 0, ui_camera_screen_init);
+
+    }
+}
+
+void ui_event_Button11(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) 
+    {
+        ESP_LOGI(TAG,"change screen to ui_calender");
+        
+        _ui_screen_change(&ui_calender, LV_SCR_LOAD_ANIM_NONE, 150, 0, ui_calender_screen_init);
 
     }
 }
@@ -102,8 +117,60 @@ void ui_app2_screen_init(void)
     lv_obj_set_style_outline_width(ui_cameraImage, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_outline_pad(ui_cameraImage, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
+
+    ui_Button11 = lv_btn_create(ui_app2);
+    lv_obj_set_width(ui_Button11, 115);
+    lv_obj_set_height(ui_Button11, 50);
+    lv_obj_set_x(ui_Button11, -183);
+    lv_obj_set_y(ui_Button11, 47);
+    lv_obj_set_align(ui_Button11, LV_ALIGN_TOP_MID);
+    lv_obj_clear_flag(ui_Button11, LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_GESTURE_BUBBLE | LV_OBJ_FLAG_SNAPPABLE |
+                      LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+                      LV_OBJ_FLAG_SCROLL_CHAIN);     /// Flags
+    lv_obj_set_style_radius(ui_Button11, 15, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_Button11, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_Button11, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_color(ui_Button11, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_opa(ui_Button11, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui_Button11, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_color(ui_Button11, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_opa(ui_Button11, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_width(ui_Button11, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_outline_pad(ui_Button11, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_color(ui_Button11, lv_color_hex(0xA6A6A6), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_opa(ui_Button11, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(ui_Button11, 10, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_spread(ui_Button11, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(ui_Button11, 15, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(ui_Button11, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_bg_opa(ui_Button11, 255, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_color(ui_Button11, lv_color_hex(0xFF0000), LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_opa(ui_Button11, 255, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_width(ui_Button11, 10, LV_PART_MAIN | LV_STATE_PRESSED);
+    lv_obj_set_style_shadow_spread(ui_Button11, 0, LV_PART_MAIN | LV_STATE_PRESSED);
+
+    ui_calenderImage = lv_img_create(ui_Button11);
+    lv_img_set_src(ui_calenderImage, &ui_img_camera_png);
+    lv_obj_set_width(ui_calenderImage, LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ui_calenderImage, LV_SIZE_CONTENT);    /// 1
+    lv_obj_set_x(ui_calenderImage, 0);
+    lv_obj_set_y(ui_calenderImage, -90);
+    lv_obj_set_align(ui_calenderImage, LV_ALIGN_TOP_MID);
+    lv_obj_add_flag(ui_calenderImage, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_EVENT_BUBBLE);     /// Flags
+    lv_obj_clear_flag(ui_calenderImage, LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_GESTURE_BUBBLE | LV_OBJ_FLAG_SNAPPABLE |
+                      LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+                      LV_OBJ_FLAG_SCROLL_CHAIN);     /// Flags
+    lv_img_set_zoom(ui_calenderImage, 50);
+    lv_obj_set_style_radius(ui_calenderImage, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui_calenderImage, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui_calenderImage, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+
     lv_obj_add_event_cb(ui_Button10, ui_event_Button10, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_app2, ui_event_app2, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_Button11, ui_event_Button11, LV_EVENT_ALL, NULL);
+
+
 
 }
 

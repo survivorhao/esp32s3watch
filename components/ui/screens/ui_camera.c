@@ -19,7 +19,7 @@ void ui_camera_return_event_cb(lv_event_t * e)
         ESP_LOGI("ui_camera","change screen tp ui_app2");
         esp_event_post_to(ui_event_loop_handle, APP_EVENT, APP_CAMERA_EXIT, NULL, 0, portMAX_DELAY);
         
-        _ui_screen_change(&ui_app2, LV_SCR_LOAD_ANIM_NONE, 150, 0, ui_app2_screen_init);     
+        _ui_screen_change(&ui_app2, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_app2_screen_init);     
         
         if(ui_camera!=NULL)
         {
@@ -30,7 +30,6 @@ void ui_camera_return_event_cb(lv_event_t * e)
             camera_exit_but=NULL;
 
         }
-        
     }
 
 

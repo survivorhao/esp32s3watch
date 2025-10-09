@@ -24,6 +24,8 @@
 #define XCLK_FREQ_HZ 24000000
 
 
+extern int  camera_frame_save_file_counter;
+
 typedef enum {
 
     //保存当前帧

@@ -105,7 +105,7 @@ static void user_sntp_srv_handler(void* arg, esp_event_base_t event_base, int32_
     //convert timeinfo to string 
     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
     ESP_LOGI(TAG, "The current date/time in Shanghai is: %s", strftime_buf);
-
+    
     time_update_init();
 
     ESP_ERROR_CHECK(esp_event_post_to(ui_event_loop_handle,APP_EVENT, APP_SNTP_SYNED, NULL, 0, portMAX_DELAY));

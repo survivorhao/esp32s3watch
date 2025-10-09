@@ -31,7 +31,7 @@ extern "C" {
 #include "screens/ui_camera.h"
 #include "screens/ui_canvas.h"
 #include "screens/ui_sd_browser.h"
-
+#include "screens/ui_calender.h"
 ///////////////////// VARIABLES ////////////////////
 
 
@@ -61,6 +61,7 @@ LV_IMG_DECLARE(ui_img_heavyrainimage_png);    // assets/heavyRainImage.png
 LV_IMG_DECLARE(ui_img_partcloudyimage_png);    // assets/partCloudyImage.png
 LV_IMG_DECLARE(ui_img_sunimage_png);    // assets/sunImage.png
 LV_IMG_DECLARE(ui_img_camera_png);    // assets/camera.png
+LV_IMG_DECLARE(ui_img_calender_png);    // assets/camera.png
 LV_IMG_DECLARE(red);    // assets/camera.png
 
 // UI INIT

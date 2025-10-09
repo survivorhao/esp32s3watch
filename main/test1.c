@@ -4,6 +4,7 @@
 #include    "freertos/task.h"
 #include    <stdint.h>
 #include    <inttypes.h>
+#include    "nvs_flash.h"
 
 #include    "sdcard.h"
 #include    "audio.h"
@@ -40,6 +41,9 @@ static const char * TAG="my_main";
 
 void app_lvgl_display(void);
 
+//init save camera frame sequence
+void set_camera_frame_sequence(void);
+
 //输出任务信息
 static void print_task_list_vTaskList(void);
 
@@ -64,14 +68,16 @@ void lv_log_print(const char * buf)
 
 
 }
-lv_obj_t *cam_img_obj;
-lv_obj_t *screen;
-static void a_task_process_lcd(void *arg);
 
 
 void app_main(void)
 {  
 
+    // 初始化 NVS（全局，一次性）
+    ESP_ERROR_CHECK(nvs_flash_init());
+    
+    set_camera_frame_sequence();
+    
     print_heap_caps_stats();
 
     //初始化 新版i2c驱动
@@ -100,7 +106,6 @@ void app_main(void)
 
     // print_heap_caps_stats();
 
- 
     xTaskCreatePinnedToCore(wifi_task,"my_wifi_task",8192,NULL,1,NULL,1 );
 
     // print_heap_caps_stats();
@@ -128,7 +133,6 @@ void app_main(void)
     // vTaskDelay(NULL);
 
 }
-
 // *INDENT-OFF*
 void app_lvgl_display(void)
 {
@@ -138,6 +142,41 @@ void app_lvgl_display(void)
 
     lvgl_port_unlock();
 }
+
+void set_camera_frame_sequence(void)
+{
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open("camera_fra", NVS_READWRITE, &handle);
+    if (err != ESP_OK) 
+    {
+       ESP_LOGE(TAG,"nvs open namespace fail ");
+       return ;
+    }
+
+    err = nvs_get_i32(handle, "frame_seq", &camera_frame_save_file_counter);
+    if (err == ESP_ERR_NVS_NOT_FOUND) 
+    {
+        // key 不存在，写入初始值0 
+        nvs_set_i32(handle, "frame_seq", 0);
+        nvs_commit(handle);
+
+    }else if (err == ESP_OK) 
+    {
+
+    }else 
+    {
+        ESP_LOGE(TAG,"nvs namespace read specific key fail ");
+        return ;
+    }
+
+    nvs_close(handle);
+
+
+}
+
+
+
 
 static void print_task_list_vTaskList(void)
 {

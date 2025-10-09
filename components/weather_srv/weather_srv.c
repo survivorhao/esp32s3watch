@@ -73,7 +73,7 @@ void weather_register_weather_request_handler(void)
      
 
 }
-/// @brief 用户weather request handler,由于调用心智天气api,其更新时间为几十分钟，因此过于频繁请求直接忽略
+/// @brief 
 /// @param arg 
 /// @param event_base 
 /// @param event_id 
@@ -106,7 +106,7 @@ static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int
     char *weather_response_buffer = malloc(HTTP_RES_MAX_LEN + 1);
 
     esp_http_client_config_t config =
-        {
+    {
             .url = TODAY_WEATHER_URL,
             .event_handler = _http_event_handler,
             .user_data = weather_response_buffer, // Pass address of local buffer to get response,store response data
@@ -116,7 +116,7 @@ static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int
             .transport_type = HTTP_TRANSPORT_OVER_SSL, // https
 
             .crt_bundle_attach = esp_crt_bundle_attach, // 使用官方内置的一套可信的根证书（CA）集合，来验证 HTTPS 网站提供的证书合法性
-        };
+    };
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
 

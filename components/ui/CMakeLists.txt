@@ -7,6 +7,7 @@ SET(SOURCES screens/ui_lockScreen.c
     screens/ui_camera.c
     screens/ui_canvas.c
     screens/ui_sd_browser.c
+    screens/ui_calender.c
     ui_theme_manager.c
     ui_themes.c
     ui.c
@@ -29,6 +30,7 @@ SET(SOURCES screens/ui_lockScreen.c
     images/ui_img_lightrainimage_png.c
     images/ui_img_cloudyimage2_png.c
     images/ui_img_cloudyimage1_png.c
+    images/ui_img_calender_png.c
     images/ui_img_moderaterainimage_png.c
     images/ui_img_heavyrainimage_png.c
     images/ui_img_partcloudyimage_png.c
