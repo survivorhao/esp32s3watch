@@ -181,7 +181,7 @@ void bsp_camera_deinit(void)
 
     //保存当前帧序号
     nvs_handle_t handle;
-    esp_err_t err = nvs_open("camera_fra", NVS_READWRITE, &handle);
+    esp_err_t err = nvs_open("user", NVS_READWRITE, &handle);
     if (err != ESP_OK) 
     {
        ESP_LOGE(TAG,"nvs open namespace fail ");
@@ -408,7 +408,7 @@ void save_frame_to_bmp(const char* out_image)
     }
 
     char filename[64];
-    snprintf(filename, sizeof(filename), "/sdcard/camera/frame_%04d.bmp", camera_frame_save_file_counter++);
+    snprintf(filename, sizeof(filename), "/sdcard/camera/fra_%04d.bmp", camera_frame_save_file_counter++);
 
     // 打开文件,如果存在文件则清空
     FILE* f = fopen(filename, "wb");

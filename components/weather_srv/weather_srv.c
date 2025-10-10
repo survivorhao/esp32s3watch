@@ -1,5 +1,4 @@
 #include <stdio.h>
-
 #include "esp_http_client.h"
 #include "esp_err.h"
 #include "esp_log.h"
@@ -7,7 +6,7 @@
 #include "esp_tls.h"
 #include "esp_crt_bundle.h"
 #include <sys/param.h>
-
+#include <string.h>
 
 
 #include "weather_srv.h"
@@ -30,16 +29,24 @@ static const char *TAG = "weather_srv";
 #define MAX_HTTP_OUTPUT_BUFFER 2048
 
 // 今天天气api,地址武汉
-#define TODAY_WEATHER_URL "https://api.seniverse.com/v3/weather/now.json?key=SFj3LEY7zNwXAZt1V&location=wuhan&language=en&unit=c"
+#define TODAY_WEATHER_URL_PREFIX    "https://api.seniverse.com/v3/weather/now.json?key=SFj3LEY7zNwXAZt1V&location="
+#define TODAY_WEATHER_URL_SUFFIX    "&language=en&unit=c"
 
 // 未来三天天气api,地址武汉
-#define _3_DAY_WEATHER_URL "https://api.seniverse.com/v3/weather/daily.json?key=SFj3LEY7zNwXAZt1V&location=wuhan&language=en&unit=c&start=0&days=5"
+#define _3_TODAY_WEATHER_URL_PREFIX    "https://api.seniverse.com/v3/weather/daily.json?key=SFj3LEY7zNwXAZt1V&location="
+#define _3_TODAY_WEATHER_URL_SUFFIX    "&language=en&unit=c&start=0&days=5"
 
 weather_data_t today_weather;
 
 
 SemaphoreHandle_t weather_request_mutex = NULL;          // 互斥量保护状态和 WiFi 操作,确保current_wifi_state的改变可靠
 
+static char final_today_weather_url[256];
+
+static char final_3_today_weather_url[256];
+
+//默认查询wuhan天气
+char weather_position[32]="wuhan";
 
 
 //----------------------------------------------------------------------------------------------------------------------------
@@ -51,6 +58,8 @@ SemaphoreHandle_t weather_request_mutex = NULL;          // 互斥量保护状�
 //---------------------------------------------------------------------------------------------------------------------
 
 static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
+static void user_weather_pos_change_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
+
 
 esp_err_t _http_event_handler(esp_http_client_event_t *evt);
 
@@ -66,13 +75,15 @@ void parse_today_weather_json(const char *json_str);
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
-void weather_register_weather_request_handler(void)
+void weather_register_weathe_service_handler(void)
 {
     // 注册sntp request handler
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_WEATHER_REQUEST, user_weather_srv_handler, NULL));
-     
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_WEATHER_POSITION_CHANGE, user_weather_pos_change_handler, NULL)); 
 
 }
+
+
 /// @brief 
 /// @param arg 
 /// @param event_base 
@@ -102,12 +113,16 @@ static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int
     //在成功发送weather request前提下改变上次tick值
     last_tick= now_tick;
 
+    //set http client access url 
+    snprintf(final_today_weather_url, sizeof(final_today_weather_url), "%s%s%s", TODAY_WEATHER_URL_PREFIX, weather_position, TODAY_WEATHER_URL_SUFFIX);
+    snprintf(final_3_today_weather_url, sizeof(final_3_today_weather_url), "%s%s%s", _3_TODAY_WEATHER_URL_PREFIX, weather_position, _3_TODAY_WEATHER_URL_SUFFIX);
+
 
     char *weather_response_buffer = malloc(HTTP_RES_MAX_LEN + 1);
 
     esp_http_client_config_t config =
     {
-            .url = TODAY_WEATHER_URL,
+            .url = final_today_weather_url,
             .event_handler = _http_event_handler,
             .user_data = weather_response_buffer, // Pass address of local buffer to get response,store response data
 
@@ -140,7 +155,7 @@ static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int
 
 
     //访问近三天天气，改变访问的url即可
-    esp_http_client_set_url(client,_3_DAY_WEATHER_URL);
+    esp_http_client_set_url(client,final_3_today_weather_url);
 
     //此函数默认为blocking执行完毕返回
     err = esp_http_client_perform(client);
@@ -180,7 +195,17 @@ static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int
 
 }
 
+static void user_weather_pos_change_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+{
 
+    snprintf(final_today_weather_url, sizeof(final_today_weather_url), "%s%s%s", TODAY_WEATHER_URL_PREFIX, weather_position, TODAY_WEATHER_URL_SUFFIX);
+    snprintf(final_3_today_weather_url, sizeof(final_3_today_weather_url), "%s%s%s", _3_TODAY_WEATHER_URL_PREFIX, weather_position, _3_TODAY_WEATHER_URL_SUFFIX);
+
+
+    ESP_LOGI(TAG,"new weather position is %s ",weather_position);
+
+
+}
 
 
 

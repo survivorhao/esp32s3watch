@@ -154,7 +154,7 @@ void ui_app2_screen_init(void)
     lv_obj_set_width(ui_calenderImage, LV_SIZE_CONTENT);   /// 1
     lv_obj_set_height(ui_calenderImage, LV_SIZE_CONTENT);    /// 1
     lv_obj_set_x(ui_calenderImage, 0);
-    lv_obj_set_y(ui_calenderImage, -90);
+    lv_obj_set_y(ui_calenderImage, -87);
     lv_obj_set_align(ui_calenderImage, LV_ALIGN_TOP_MID);
     lv_obj_add_flag(ui_calenderImage, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_EVENT_BUBBLE);     /// Flags
     lv_obj_clear_flag(ui_calenderImage, LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_GESTURE_BUBBLE | LV_OBJ_FLAG_SNAPPABLE |

@@ -19,6 +19,7 @@ extern "C" {
 #include "event.h"
 #include "esp_heap_caps.h"
 #include <string.h>
+#include "nvs_flash.h"
 
 ///////////////////// SCREENS ////////////////////
 
@@ -32,6 +33,7 @@ extern "C" {
 #include "screens/ui_canvas.h"
 #include "screens/ui_sd_browser.h"
 #include "screens/ui_calender.h"
+#include "screens/ui_setting.h"
 ///////////////////// VARIABLES ////////////////////
 
 

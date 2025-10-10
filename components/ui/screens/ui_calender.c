@@ -1,4 +1,6 @@
 #include "../ui.h"
+#include <sys/time.h>
+
 
 lv_obj_t * ui_calender=NULL;
 lv_obj_t * calendar=NULL;
@@ -41,13 +43,21 @@ void ui_calender_screen_init(void)
     lv_obj_set_size(calendar, lv_pct(100), lv_pct(80));
     lv_obj_align(calendar,LV_ALIGN_CENTER,0,10);
 
-    lv_calendar_set_today_date(calendar, 2025, 10, 9);
-    lv_calendar_set_showed_date(calendar, 2025, 10);
-    static const char * day_names[7] = {"Sun", "Mon", "Tue", "Wed", "Thur", "Fri", "Sat"};
-    lv_calendar_set_day_names(calendar, day_names);
-    lv_calendar_header_dropdown_create(calendar);
+    time_t now;
+    struct tm timeinfo;
+    time(&now);
+
+    //将时间戳转换为时间结构体
+    localtime_r(&now, &timeinfo);
+
+    //设置最新日期到calendar widget
+    lv_calendar_set_today_date(calendar, timeinfo.tm_year+1900, timeinfo.tm_mon+1, timeinfo.tm_mday);
+    lv_calendar_set_showed_date(calendar, timeinfo.tm_year+1900, timeinfo.tm_mon+1);
+
+
     lv_calendar_header_arrow_create(calendar);
 
+    
 
     calender_exit_but = lv_img_create(ui_calender);
     lv_img_set_src(calender_exit_but , &ui_img_return_png);

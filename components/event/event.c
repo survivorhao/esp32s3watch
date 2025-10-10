@@ -25,7 +25,7 @@ esp_event_loop_handle_t   ui_event_loop_handle;
 void  ui_event_loop_init(void)
 {
     esp_event_loop_args_t loop_args = {
-        .queue_size = 6,
+        .queue_size = 8,
         .task_name = "ui_event_loop",
         .task_priority = 10,    
         .task_stack_size = 5120,

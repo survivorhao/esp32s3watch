@@ -8,6 +8,7 @@ SET(SOURCES screens/ui_lockScreen.c
     screens/ui_canvas.c
     screens/ui_sd_browser.c
     screens/ui_calender.c
+    screens/ui_setting.c
     ui_theme_manager.c
     ui_themes.c
     ui.c
@@ -44,7 +45,7 @@ idf_component_register(SRCS ${SOURCES}
                        "./components" 
                        PRIV_REQUIRES    
                        
-                       REQUIRES      lvgl   esp_lvgl_port  event
+                       REQUIRES      lvgl   esp_lvgl_port  event nvs_flash weather_srv
                        
                        )
 

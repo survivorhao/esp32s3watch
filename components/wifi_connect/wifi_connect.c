@@ -207,8 +207,8 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
 
                 // 决定实际要获取的数量
                 uint16_t ap_fetch_count = ap_total_count;
-                if (ap_fetch_count > 4) {
-                    ap_fetch_count = 4;
+                if (ap_fetch_count > 5) {
+                    ap_fetch_count = 5;
                 }
 
                 // 根据你打算获取的数量来分配内存

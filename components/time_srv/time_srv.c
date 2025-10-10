@@ -108,8 +108,16 @@ static void user_sntp_srv_handler(void* arg, esp_event_base_t event_base, int32_
     
     time_update_init();
 
-    ESP_ERROR_CHECK(esp_event_post_to(ui_event_loop_handle,APP_EVENT, APP_SNTP_SYNED, NULL, 0, portMAX_DELAY));
+    uint8_t retry_count=0;
 
+    while(esp_event_post_to(ui_event_loop_handle,APP_EVENT, APP_SNTP_SYNED, NULL, 0, portMAX_DELAY)==ESP_ERR_TIMEOUT &&retry_count <5)
+    {
+        retry_count++;
+
+        vTaskDelay(100);
+    }
+
+    
 }
 
 
@@ -131,7 +139,7 @@ static void obtain_time(void)
 
 
     int retry = 0;
-    const int retry_count = 15;
+    const int retry_count = 20;
     while (esp_netif_sntp_sync_wait(2000 / portTICK_PERIOD_MS) == ESP_ERR_TIMEOUT && ++retry < retry_count) 
     {
         ESP_LOGI(TAG, "Waiting for system time to be set... (%d/%d)", retry, retry_count);

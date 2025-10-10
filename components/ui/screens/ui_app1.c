@@ -33,7 +33,7 @@ void ui_event_app1(lv_event_t * e)
     }
     if(event_code == LV_EVENT_GESTURE &&  lv_indev_get_gesture_dir(lv_indev_get_act()) == LV_DIR_LEFT) {
         lv_indev_wait_release(lv_indev_get_act());
-        _ui_screen_change(&ui_app2, LV_SCR_LOAD_ANIM_MOVE_LEFT, 100, 0, &ui_app2_screen_init);
+        _ui_screen_change(&ui_app2, LV_SCR_LOAD_ANIM_NONE, 100, 0, &ui_app2_screen_init);
     }
 }
 
@@ -42,7 +42,7 @@ void ui_event_Button1(lv_event_t * e)
     lv_event_code_t event_code = lv_event_get_code(e);
 
     if(event_code == LV_EVENT_CLICKED) {
-        _ui_screen_change(&ui_wifi, LV_SCR_LOAD_ANIM_MOVE_LEFT, 150, 0, &ui_wifi_screen_init);
+        _ui_screen_change(&ui_wifi, LV_SCR_LOAD_ANIM_NONE, 150, 0, &ui_wifi_screen_init);
     }
 }
 
@@ -51,7 +51,7 @@ void ui_event_Button4(lv_event_t * e)
     lv_event_code_t event_code = lv_event_get_code(e);
 
     if(event_code == LV_EVENT_CLICKED) {
-    _ui_screen_change(&ui_weather, LV_SCR_LOAD_ANIM_MOVE_LEFT, 150, 0, &ui_weather_screen_init);
+    _ui_screen_change(&ui_weather, LV_SCR_LOAD_ANIM_NONE, 150, 0, &ui_weather_screen_init);
         //发送https weather request 
     esp_event_post_to(ui_event_loop_handle,APP_EVENT,APP_WEATHER_REQUEST,NULL,0,portMAX_DELAY);
     ESP_LOGI("ui_event"," trigger weather request event ");
@@ -65,7 +65,7 @@ void ui_event_Button8(lv_event_t * e)
     if(event_code == LV_EVENT_CLICKED) 
     {
         
-       _ui_screen_change(&ui_canvas, LV_SCR_LOAD_ANIM_MOVE_LEFT, 150, 0, ui_canvas_screen_init);
+       _ui_screen_change(&ui_canvas, LV_SCR_LOAD_ANIM_NONE, 150, 0, ui_canvas_screen_init);
     
     }
 }
@@ -77,7 +77,7 @@ void ui_event_Button6(lv_event_t * e)
     if(event_code == LV_EVENT_CLICKED) 
     {
     
-        _ui_screen_change(&ui_sd_browser, LV_SCR_LOAD_ANIM_MOVE_LEFT, 150, 0, ui_sd_browser_screen_init);
+        _ui_screen_change(&ui_sd_browser, LV_SCR_LOAD_ANIM_NONE, 100, 0, ui_sd_browser_screen_init);
         file_refresh_req_data_t  data;
         
         data.is_directory=1;
@@ -87,6 +87,18 @@ void ui_event_Button6(lv_event_t * e)
         
         esp_event_post_to(ui_event_loop_handle, APP_EVENT, APP_FILE_REFRESH_REQUEST, &data, sizeof(data), portMAX_DELAY);
     
+
+    }
+}
+
+void ui_event_Button5(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) 
+    {
+    
+        _ui_screen_change(&ui_setting, LV_SCR_LOAD_ANIM_NONE, 100, 0, ui_setting_screen_init);
 
     }
 }
@@ -490,6 +502,7 @@ void ui_app1_screen_init(void)
     lv_obj_add_event_cb(ui_app1, ui_event_app1, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_Button8, ui_event_Button8, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_Button6, ui_event_Button6, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_Button5, ui_event_Button5, LV_EVENT_ALL, NULL);
 }
 
 void ui_app1_screen_destroy(void)

@@ -44,6 +44,8 @@ enum{
 
     APP_WEATHER_RESPONSE,                  //weather   event  response 
 
+    APP_WEATHER_POSITION_CHANGE,           //weather   event  response 
+
     APP_SNTP_REQUEST,                      //sntp service request       
 
     APP_SNTP_SYNED,                        //sntp syned          

@@ -41,8 +41,14 @@ static const char * TAG="my_main";
 
 void app_lvgl_display(void);
 
+void nvs_user_data_init(void);
+
 //init save camera frame sequence
-void set_camera_frame_sequence(void);
+void nvs_set_camera_frame_sequence(void);
+
+//init http client weatehr position 
+void nvs_weather_position_init(void);
+
 
 //输出任务信息
 static void print_task_list_vTaskList(void);
@@ -76,7 +82,7 @@ void app_main(void)
     // 初始化 NVS（全局，一次性）
     ESP_ERROR_CHECK(nvs_flash_init());
     
-    set_camera_frame_sequence();
+    nvs_user_data_init();
     
     print_heap_caps_stats();
 
@@ -100,7 +106,7 @@ void app_main(void)
 
     time_register_sntp_handler();
 
-    weather_register_weather_request_handler();
+    weather_register_weathe_service_handler();
 
     camera_register_camera_handler();
 
@@ -124,7 +130,6 @@ void app_main(void)
    
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_WEATHER_REQUEST, &my_test_printf_hesp_info, NULL));
 
-    // vTaskDelay(500);
 
     // print_heap_caps_stats();
 
@@ -143,11 +148,26 @@ void app_lvgl_display(void)
     lvgl_port_unlock();
 }
 
-void set_camera_frame_sequence(void)
+/// @brief Initialize or read the corresponding data in NVS.
+/// @param  
+void nvs_user_data_init(void)
+{
+    //camera frame sequence set
+    nvs_set_camera_frame_sequence();
+
+    nvs_weather_position_init();
+
+
+
+
+}
+
+
+void nvs_set_camera_frame_sequence(void)
 {
 
     nvs_handle_t handle;
-    esp_err_t err = nvs_open("camera_fra", NVS_READWRITE, &handle);
+    esp_err_t err = nvs_open("user", NVS_READWRITE, &handle);
     if (err != ESP_OK) 
     {
        ESP_LOGE(TAG,"nvs open namespace fail ");
@@ -172,6 +192,47 @@ void set_camera_frame_sequence(void)
 
     nvs_close(handle);
 
+
+}
+
+void nvs_weather_position_init(void)
+{
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open("user", NVS_READWRITE, &handle);
+    if (err != ESP_OK) 
+    {
+       ESP_LOGE(TAG,"nvs open namespace fail ");
+       return ;
+    }
+
+    size_t required_size;
+    err = nvs_get_str(handle, "weather_pos", NULL, &required_size);
+    
+    if(required_size >sizeof(weather_position))
+    {
+        ESP_LOGE(TAG, "require size > actual weather_position array  size");
+        return ;
+
+    }
+    err = nvs_get_str(handle, "weather_pos", weather_position, &required_size);
+
+    if (err == ESP_ERR_NVS_NOT_FOUND) 
+    {
+        // key 不存在，写入初始值0 
+        nvs_set_str(handle, "weather_pos", weather_position);
+        nvs_commit(handle);
+
+    }else if (err == ESP_OK) 
+    {
+
+    }else 
+    {
+        ESP_LOGE(TAG,"nvs namespace read specific key fail ");
+        return ;
+    }
+
+    nvs_close(handle);
 
 }
 

@@ -29,7 +29,7 @@
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
-const char *TAG="my_sdcard";
+static const char *TAG="my_sdcard";
 
 static bool sd_mount_success=0;
 
@@ -443,12 +443,6 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         return ESP_FAIL;
     }
 
-    // 为真表示从上到下存储,从bmp文件中先读出来的数据 是实际图像的上方数据,应该放在Buff缓冲的首部
-    // 为假表示从下到上存储,从bmp文件中先读出来的数据 是实际图像的下方数据,应该放在Buff缓冲的尾部
-    int y_start = is_bottom_up ? 0 : height - 1;
-    int y_step = is_bottom_up ? 1 : -1;
-
-    uint16_t test_point=0;
     for (int y = 0; y < height; y++)
     {
         // 一次读取整行数据，包括填充,单次读取太少反复io浪费资源

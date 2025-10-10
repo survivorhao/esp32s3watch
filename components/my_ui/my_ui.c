@@ -301,7 +301,7 @@ void my_ui_task(void *par)
                         //return wifi screen 
                         case UI_MSG_WIFI_PASS_IN_DONE:
 
-                            //回到wifi screen ,删除password input screen
+                            //return wifi screen 
                             _ui_screen_change(&ui_wifi, LV_SCR_LOAD_ANIM_MOVE_RIGHT, 150, 0, NULL);  
                             lv_textarea_set_text(ui_PasswordTextarea,"");
 
@@ -704,7 +704,7 @@ void my_ui_create_password_screen(void)
 
     // 创建密码输入框 (textarea)
     ui_PasswordTextarea = lv_textarea_create(ui_PasswordScreen);
-    lv_obj_set_size(ui_PasswordTextarea, LV_PCT(100), 140);  // 示例大小
+    lv_obj_set_size(ui_PasswordTextarea, LV_PCT(100), 160);  // 示例大小
     lv_obj_align(ui_PasswordTextarea, LV_ALIGN_TOP_MID, 0, 0);  // 上方居中
     lv_textarea_set_placeholder_text(ui_PasswordTextarea, "Enter Password");
     lv_textarea_set_one_line(ui_PasswordTextarea, true);  // 单行
@@ -787,7 +787,7 @@ static void ui_weather_update(weather_data_t data)
 
 
 }
-/// @brief 根据http server返回的weather code改变相应的图片
+/// @brief 根据http server返回的weather code改变相应的图片,具体请参考https://seniverse.yuque.com/hyper_data/api_v3/yev2c3
 /// @param weather_code     
 /// @param obj  要改变的image wideget 对象的地址
 static void ui_weather_change_img(int weather_code, lv_obj_t **obj)
@@ -807,6 +807,7 @@ static void ui_weather_change_img(int weather_code, lv_obj_t **obj)
             lv_img_set_src(*obj,&ui_img_cloudyimage1_png);
         break;
 
+        //5-8同一情况均为Partly Cloudy
         case 5:
         case 6:
         case 7:
@@ -826,6 +827,7 @@ static void ui_weather_change_img(int weather_code, lv_obj_t **obj)
             lv_img_set_src(*obj,&ui_img_moderaterainimage_png);
         break;
 
+        //15-18同一情况均为Heavy Rain
         case 15:
         case 16:
         case 17:
