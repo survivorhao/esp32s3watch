@@ -1,6 +1,7 @@
 #include "../ui.h"
 #include <string.h>
 #include "weather_srv.h"
+#include "bsp_driver.h"
 
 lv_obj_t *ui_setting=NULL;
 lv_obj_t *setting_exit_but=NULL;
@@ -18,6 +19,10 @@ lv_obj_t *wea_pos_keyboard=NULL;
 lv_obj_t *wea_pos_ensure_but=NULL;
 
 
+lv_obj_t *lightness_screen=NULL;
+lv_obj_t *lightness_slider=NULL;
+lv_obj_t *slider_label=NULL;
+lv_obj_t *lightness_exit_but=NULL;
 
 static const char *TAG="ui_setting ";
 
@@ -30,12 +35,19 @@ static const char *TAG="ui_setting ";
 //---------------------------------------------------------------------------------------------
 //---------------------------------------start---------------------------------------------------
 void weather_pos_handler(void *arg);
-
+void lightness_adjust_handler(void *arg);
 
 
 //---------------------------------------end---------------------------------------------------
 //---------------------------------------------------------------------------------------------
 
+
+
+
+
+void save_custom_setting_to_nvs(void);
+void append_city(char *arr, size_t arr_size, const char *city);
+void nvs_store_weather_pos_load(void);
 
 //setting array,which will be argument as lv_list_add_btn
 static char   Setting_option_array[10][64]={
@@ -53,15 +65,9 @@ static char   Setting_option_array[10][64]={
                     
 };
 
-
-void save_custom_setting_to_nvs(void);
-void append_city(char *arr, size_t arr_size, const char *city);
-void nvs_store_weather_pos_load(void);
-
-
 //each setting option coule have a handler which can be registered here, type is void (*handler)(void *) 
 static const void (*Setting_option_handler[10])(void *)={
-                    NULL,
+                    lightness_adjust_handler,
                     weather_pos_handler,
                     NULL,
                     NULL,
@@ -98,6 +104,11 @@ void ui_setting_return_event_cb(lv_event_t * e)
         {
             lv_obj_del_delayed(weather_pos,500);
             weather_pos=NULL;
+        }
+        if(lightness_screen!=NULL)
+        {
+            lv_obj_del_delayed(lightness_screen,700);
+            lightness_screen=NULL;
         }
 
         save_custom_setting_to_nvs();
@@ -188,7 +199,41 @@ static void setting_button_click_cb(lv_event_t *e)
 
 }
 
+static void slider_event_cb(lv_event_t * e)
+{
+    lv_obj_t * slider = lv_event_get_target(e);
+    char buf[8];
+    int value=(int)lv_slider_get_value(slider);
 
+    lv_snprintf(buf, sizeof(buf), "%d%%", value);
+    lv_label_set_text(slider_label, buf);
+    
+    //adjust bightness
+    bsp_display_brightness_set(value);
+
+
+}
+
+
+/// @brief click this button to return to previous screen 
+/// @param e 
+void ui_lightness_return_event_cb(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) 
+    {
+
+        _ui_screen_change(&ui_setting, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_setting_screen_init);     
+        
+    }
+}
+
+
+
+
+/// @brief 
+/// @param  
 void ui_setting_screen_init(void )
 {
     //create screen 
@@ -236,7 +281,7 @@ void ui_setting_screen_init(void )
     //create setting options
     for(uint8_t i=0; i<TOTAL_SETTING_OPTIONS; i++)
     {
-        //create screen lightness setting
+        
         list_button= lv_list_add_btn(setting_list, LV_SYMBOL_SETTINGS, Setting_option_array[i]); 
         if(list_button!=NULL)
         {
@@ -245,7 +290,7 @@ void ui_setting_screen_init(void )
 
     }
   
-
+    //add return button call back function
     lv_obj_add_event_cb(setting_exit_but , ui_setting_return_event_cb, LV_EVENT_CLICKED, NULL);    
 
 
@@ -259,15 +304,18 @@ void ui_setting_screen_init(void )
 
 
 //weather position setting input 
+
 void ui_weather_pos_screen_init(void) 
 {
     weather_pos = lv_obj_create(NULL);  
     lv_obj_set_style_bg_color(weather_pos, lv_color_hex(0xffffff), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(weather_pos, 255, LV_PART_MAIN);
+    lv_obj_clear_flag(weather_pos, LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+    LV_OBJ_FLAG_SCROLL_CHAIN|LV_OBJ_FLAG_SCROLLABLE);      /// Flags
 
     // 创建密码输入框 (textarea)
     wea_pos_text_area = lv_textarea_create(weather_pos);
-    lv_obj_set_size(wea_pos_text_area, LV_PCT(100), 140);  // 示例大小
+    lv_obj_set_size(wea_pos_text_area, LV_PCT(100), 180);  // 示例大小
     lv_obj_align(wea_pos_text_area, LV_ALIGN_TOP_MID, 0, 0);  // 上方居中
     lv_textarea_set_placeholder_text(wea_pos_text_area, "Enter current weather position");
     lv_textarea_set_one_line(wea_pos_text_area, true);  // 单行
@@ -290,16 +338,61 @@ void ui_weather_pos_screen_init(void)
     lv_obj_center(label);
 }
 
+//screen lightness adjust
+
+void ui_lightness_screen_init(void) 
+{
+    lightness_screen = lv_obj_create(NULL);  
+    lv_obj_set_style_bg_color(lightness_screen, lv_color_hex(0xffffff), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(lightness_screen, 255, LV_PART_MAIN);
+    lv_obj_clear_flag(lightness_screen, LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+    LV_OBJ_FLAG_SCROLL_CHAIN|LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+
+    //create exit button (which be pressed will change current display to before one )
+    lightness_exit_but = lv_img_create(lightness_screen);
+    lv_img_set_src(lightness_exit_but , &ui_img_return_png);
+    lv_obj_set_width(lightness_exit_but , LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(lightness_exit_but , LV_SIZE_CONTENT);    /// 1
+    lv_obj_align(lightness_exit_but , LV_ALIGN_TOP_MID, -90, -80);
+    lv_obj_add_flag(lightness_exit_but , LV_OBJ_FLAG_CLICKABLE);     /// Flags
+    lv_obj_clear_flag(lightness_exit_but , LV_OBJ_FLAG_PRESS_LOCK | LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_GESTURE_BUBBLE |
+                        LV_OBJ_FLAG_SNAPPABLE  | LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+                        LV_OBJ_FLAG_SCROLL_CHAIN);     /// Flags
+    lv_img_set_zoom(lightness_exit_but , 50);
+    lv_obj_set_style_bg_color(lightness_exit_but , lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(lightness_exit_but , 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_set_style_img_recolor(lightness_exit_but , lv_color_hex(0x000000), LV_PART_MAIN );
+    lv_obj_set_style_img_recolor_opa(lightness_exit_but , 0, LV_PART_MAIN);
+    lv_obj_add_event_cb(lightness_exit_but , ui_lightness_return_event_cb, LV_EVENT_CLICKED, NULL); 
 
 
+    /*Create a lightness_slider in the center of the display*/
+    lightness_slider = lv_slider_create(lightness_screen);
+    lv_obj_set_size(lightness_slider,LV_PCT(85),LV_PCT(5));
+    lv_obj_center(lightness_slider);
+    lv_obj_add_event_cb(lightness_slider, slider_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_set_style_anim_time(lightness_slider, 200, 0);
+    
 
+    /*Create a label below the lightness_slider*/
+    slider_label = lv_label_create(lightness_screen);
+    lv_label_set_text(slider_label, "0%%");
 
+    lv_obj_align_to(slider_label, lightness_slider, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 
+    
 
+}
 void weather_pos_handler(void *arg)
 {
     _ui_screen_change(&weather_pos, LV_SCR_LOAD_ANIM_NONE, 300, 0, ui_weather_pos_screen_init);
+}
 
+
+void lightness_adjust_handler(void *arg)
+{
+    _ui_screen_change(&lightness_screen, LV_SCR_LOAD_ANIM_NONE, 300, 0, ui_lightness_screen_init);
 
 
 }

@@ -252,7 +252,7 @@ esp_err_t bsp_display_brightness_set(int brightness_percent)
         brightness_percent = 0;
     }
 
-    ESP_LOGI(TAG, "Setting LCD backlight: %d%%", brightness_percent);
+    // ESP_LOGI(TAG, "Setting LCD backlight: %d%%", brightness_percent);
 
     // LEDC resolution set to 10bits, thus: 100% = 1023
     uint32_t duty_cycle = (1023 * brightness_percent) / 100;

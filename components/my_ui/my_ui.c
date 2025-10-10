@@ -704,7 +704,7 @@ void my_ui_create_password_screen(void)
 
     // 创建密码输入框 (textarea)
     ui_PasswordTextarea = lv_textarea_create(ui_PasswordScreen);
-    lv_obj_set_size(ui_PasswordTextarea, LV_PCT(100), 160);  // 示例大小
+    lv_obj_set_size(ui_PasswordTextarea, LV_PCT(100), 180);  // 示例大小
     lv_obj_align(ui_PasswordTextarea, LV_ALIGN_TOP_MID, 0, 0);  // 上方居中
     lv_textarea_set_placeholder_text(ui_PasswordTextarea, "Enter Password");
     lv_textarea_set_one_line(ui_PasswordTextarea, true);  // 单行
