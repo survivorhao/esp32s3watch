@@ -9,6 +9,7 @@ SET(SOURCES screens/ui_lockScreen.c
     screens/ui_sd_browser.c
     screens/ui_calender.c
     screens/ui_setting.c
+    screens/ui_bt.c
     ui_theme_manager.c
     ui_themes.c
     ui.c

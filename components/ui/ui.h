@@ -34,6 +34,7 @@ extern "C" {
 #include "screens/ui_sd_browser.h"
 #include "screens/ui_calender.h"
 #include "screens/ui_setting.h"
+#include "screens/ui_bt.h"
 ///////////////////// VARIABLES ////////////////////
 
 

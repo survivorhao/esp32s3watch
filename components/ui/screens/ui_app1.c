@@ -103,6 +103,17 @@ void ui_event_Button5(lv_event_t * e)
     }
 }
 
+void ui_event_Button2(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) 
+    {
+        
+       _ui_screen_change(&ui_bt, LV_SCR_LOAD_ANIM_NONE, 150, 0, ui_bt_screen_init);
+    
+    }
+}
 
 // build funtions
 
@@ -503,6 +514,7 @@ void ui_app1_screen_init(void)
     lv_obj_add_event_cb(ui_Button8, ui_event_Button8, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_Button6, ui_event_Button6, LV_EVENT_ALL, NULL);
     lv_obj_add_event_cb(ui_Button5, ui_event_Button5, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(ui_Button2, ui_event_Button2, LV_EVENT_ALL, NULL);
 }
 
 void ui_app1_screen_destroy(void)
