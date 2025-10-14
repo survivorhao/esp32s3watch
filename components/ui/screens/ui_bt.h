@@ -13,8 +13,17 @@ extern "C" {
 extern lv_obj_t *ui_bt;
 
 
+//play/pause button
+extern lv_obj_t *g_btn_play_pause;
+
 void ui_bt_screen_init(void);
 
+void ui_bt_control_init(void);
+
+void ui_bt_control_display_all(void);
+
+
+void ui_bt_control_hide_all(void);
 
 
 

@@ -20,6 +20,7 @@ extern "C" {
 #include "esp_heap_caps.h"
 #include <string.h>
 #include "nvs_flash.h"
+#include "esp_err.h"
 
 ///////////////////// SCREENS ////////////////////
 

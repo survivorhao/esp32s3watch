@@ -60,6 +60,16 @@ enum{
     //camera deinit 
     APP_CAMERA_EXIT,
 
+    APP_BLE_START,                      //start ble hid 
+
+    APP_BLE_PAIR_PASSKEY_ENTRY,
+    
+    APP_BLE_PAIR_SUCCESS,
+
+    APP_BLE_CONNECTION_CLOSE,
+    
+
+    APP_BLE_CLOSE,
 
 };
 

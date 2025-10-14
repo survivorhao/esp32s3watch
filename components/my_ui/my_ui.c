@@ -42,6 +42,8 @@ static lv_obj_t *ui_ConnectButton = NULL;  // Connect 按钮
 
 static lv_obj_t  *ui_ip_label=NULL;
 
+static lv_obj_t  *ui_ble_pass_label=NULL;
+
 static char current_ssid[33] = {0};  // 临时存储点击的 SSID
 
 
@@ -77,6 +79,12 @@ typedef enum {
     
     UI_MSG_SD_REFRESH_RES,
     
+    UI_MSG_BLE_PAIR_PASS_ENTRY,
+
+    UI_MSG_BLE_PAIR_SUCCESS,
+
+    UI_MSG_BLE_CONNECTION_CLOSE,
+
 
 } ui_message_type_t;
 
@@ -115,6 +123,13 @@ static void weather_response_handler(void* arg, esp_event_base_t event_base, int
 static void wifi_disconnected_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
 static void sd_refresh_response_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+
+static void ble_pair_pass_entry_res_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+
+static void ble_pair_success_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+
+static void ble_connection_close_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+
 
 static void ap_button_click_cb(lv_event_t *e);
 
@@ -155,26 +170,43 @@ void my_ui_task(void *par)
     }    
 
     //wifi start ,begin scan 
-    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_WIFI_SCAN_START, wifi_start_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_WIFI_SCAN_START, 
+                                wifi_start_handler, NULL));
     
     //wifi stop
-    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_WIFI_CLOSE, wifi_stop_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_WIFI_CLOSE, 
+                                wifi_stop_handler, NULL));
     
     //wifi scan done
-    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_WIFI_SCAN_DONE, wifi_scan_done_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_WIFI_SCAN_DONE, 
+                                wifi_scan_done_handler, NULL));
 
     //successfully get ip address
-    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_GET_IP, wifi_get_ip_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_GET_IP, 
+                                wifi_get_ip_handler, NULL));
 
     //local time  successfully synchronized
-    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_SNTP_SYNED, sntp_syned_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_SNTP_SYNED, 
+                                sntp_syned_handler, NULL));
 
     //get ip address successfully
-    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_WEATHER_RESPONSE, weather_response_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_WEATHER_RESPONSE, 
+                                weather_response_handler, NULL));
 
-    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_WIFI_DISCONNECTED, wifi_disconnected_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_WIFI_DISCONNECTED, 
+                                wifi_disconnected_handler, NULL));
 
-    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_FILE_REFRESH_RESPONSE, sd_refresh_response_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_FILE_REFRESH_RESPONSE, 
+                                sd_refresh_response_handler, NULL));
+
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_BLE_PAIR_PASSKEY_ENTRY, 
+                                ble_pair_pass_entry_res_handler, NULL));
+
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_BLE_PAIR_SUCCESS, 
+                                ble_pair_success_handler, NULL));
+
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_BLE_CONNECTION_CLOSE, 
+                                ble_connection_close_handler, NULL));
 
     ui_message_t received_msg;
     while (1) 
@@ -272,10 +304,6 @@ void my_ui_task(void *par)
                                 // 注册点击事件
                                 lv_obj_add_event_cb(btn, ap_button_click_cb, LV_EVENT_CLICKED, NULL);
                                 
-                                // 可选：添加 RSSI 作为子标签或其他样式
-                                // e.g., lv_obj_t *rssi_label = lv_label_create(btn);
-                                // lv_label_set_text_fmt(rssi_label, "RSSI: %d", ap_list->ap_records[i].rssi);
-                                // lv_obj_align(rssi_label, LV_ALIGN_RIGHT_MID, 0, 0);
                             }else 
                             {
                                 ESP_LOGE(TAG, "Failed to add list button for AP %d", i);
@@ -461,9 +489,58 @@ void my_ui_task(void *par)
                             {
                                 lv_label_set_text(main_path_label, "Error opening directory");
                             }
+                        break;
+                            
+                        //pasword entry event 
+                        case UI_MSG_BLE_PAIR_PASS_ENTRY:
+                                if(ui_bt!=NULL)
+                                {
+                                    if(!ui_ble_pass_label)
+                                    {
+                                        ui_ble_pass_label=lv_label_create(ui_bt);
+                                        lv_obj_set_size(ui_ble_pass_label, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+                                        lv_obj_clear_flag(ui_ble_pass_label, LV_OBJ_FLAG_HIDDEN);      // Flags
+                                        lv_obj_align(ui_ble_pass_label,LV_ALIGN_CENTER,0,10);
+                                    }
 
+                                    int  pass=((int)*((uint32_t *)received_msg.data));
+                                    lv_label_set_text_fmt(ui_ble_pass_label,"pass: %06d", pass);
+                                    lv_obj_clear_flag(ui_ble_pass_label, LV_OBJ_FLAG_HIDDEN);      // Flags
+                                }
+                        break;
+                            
+                        //ble pair success 
+                        case UI_MSG_BLE_PAIR_SUCCESS:
+                                
+                                //hide pass entry label
+                                lv_obj_add_flag(ui_ble_pass_label, LV_OBJ_FLAG_HIDDEN);      // Flags
 
+                                //g_btn_play_pause==NULL
+                                if((!g_btn_play_pause) &&(ui_bt !=NULL))
+                                {
+                                    ui_bt_control_init();
 
+                                }
+                                //play/pause is not null,in this condition is hid host actively close the connection
+                                else if(g_btn_play_pause)
+                                {
+                                    //only need to clear obj hiden flag
+                                    ui_bt_control_display_all();
+
+                                }
+                        break;
+
+                        //ble host actively close conenction
+                        case UI_MSG_BLE_CONNECTION_CLOSE:
+
+                                //in this condition is hid host actively close the connection
+                                if(g_btn_play_pause && ui_bt)
+                                {
+                                    //only need to hide cousumer control button
+                                    ui_bt_control_hide_all();
+                                }
+
+                        break; 
                         default: break;    
                 }
 
@@ -646,10 +723,11 @@ static void wifi_disconnected_handler(void* arg, esp_event_base_t event_base, in
 }
 
 
-static void sd_refresh_response_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
+static void sd_refresh_response_handler(void* arg, esp_event_base_t event_base, 
+                            int32_t event_id, void* event_data)
 {
 
-    //由于evnet_data 在此handler退出后被释放，因此需要拷贝一份
+    //Since event_data will be released after this handler exits, a copy of it on heap needs to be made.
     file_refresh_res_data_t  *cp_data= heap_caps_malloc( sizeof(file_refresh_res_data_t), MALLOC_CAP_SPIRAM |MALLOC_CAP_8BIT);
 
     
@@ -660,6 +738,54 @@ static void sd_refresh_response_handler(void* arg, esp_event_base_t event_base, 
     msg.data=(void *)cp_data;
     
     xQueueSend(ui_message_queue, &msg, portMAX_DELAY);
+
+}
+
+
+static void ble_pair_pass_entry_res_handler(void* arg, esp_event_base_t event_base, 
+                                            int32_t event_id, void* event_data)
+{
+    uint32_t pass_entry=*((uint32_t *)event_data);
+
+    ui_message_t msg;
+    msg.type=UI_MSG_BLE_PAIR_PASS_ENTRY;
+    msg.data=(void *)&pass_entry;
+    
+    xQueueSend(ui_message_queue, &msg, portMAX_DELAY);
+
+
+
+
+
+}
+
+static void ble_pair_success_handler(void* arg, esp_event_base_t event_base, 
+                        int32_t event_id, void* event_data)
+{
+    ui_message_t msg;
+    msg.type=UI_MSG_BLE_PAIR_SUCCESS;
+    msg.data=NULL;
+    
+    xQueueSend(ui_message_queue, &msg, portMAX_DELAY);
+
+
+
+
+
+}
+
+static void ble_connection_close_handler(void* arg, esp_event_base_t event_base, 
+                        int32_t event_id, void* event_data)
+{
+    ui_message_t msg;
+    msg.type=UI_MSG_BLE_CONNECTION_CLOSE;
+    msg.data=NULL;
+    
+    xQueueSend(ui_message_queue, &msg, portMAX_DELAY);
+
+
+
+
 
 }
 //----------------------------------------------------------------------------------------------------------------------------

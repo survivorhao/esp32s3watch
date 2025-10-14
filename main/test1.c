@@ -18,6 +18,8 @@
 #include    "time_srv.h"
 #include    "weather_srv.h"
 #include    "esp_camera.h"
+#include    "ble_srv.h"
+
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
@@ -79,8 +81,11 @@ void lv_log_print(const char * buf)
 void app_main(void)
 {  
 
-    // 初始化 NVS（全局，一次性）
-    ESP_ERROR_CHECK(nvs_flash_init());
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
     
     nvs_user_data_init();
     
@@ -109,6 +114,9 @@ void app_main(void)
     weather_register_weathe_service_handler();
 
     camera_register_camera_handler();
+
+    ble_register_srv_handler();
+    
 
     // print_heap_caps_stats();
 
