@@ -856,13 +856,20 @@ nimble_hid_gap_event(struct ble_gap_event *event, void *arg)
         ESP_LOGW(TAG, "connection %s; status=%d,con_hanle=%d",
                 event->connect.status == 0 ? "established" : "failed",
                 event->connect.status, event->connect.conn_handle);
+        
         if (xSemaphoreTake(ble_con_mutex, pdMS_TO_TICKS(5000)) != pdTRUE) 
         {
             ESP_LOGE(TAG, "take ble_con_mutex timeout ");
             return 0;
 
         }
+        ESP_LOGW(TAG,"before event->connect.conn_handle =%d,current_con_handle=%d",event->connect.conn_handle
+        ,current_con_handle);
+
         current_con_handle=event->connect.conn_handle;
+        
+        ESP_LOGW(TAG,"after event->connect.conn_handle =%d,current_con_handle=%d",event->connect.conn_handle
+        ,current_con_handle);
         xSemaphoreGive(ble_con_mutex);
 
         return 0;
@@ -1124,7 +1131,16 @@ static esp_err_t init_low_level(uint8_t mode)
     }
 
     ret = esp_bt_controller_enable(mode);
-    if (ret) {
+    // if (ret==ESP_OK ||ret==ESP_ERR_INVALID_STATE ) 
+    // {
+
+    // }else 
+    if (ret==ESP_OK) 
+    {
+
+    }
+    else
+    {
         ESP_LOGE(TAG, "esp_bt_controller_enable failed: %d", ret);
         return ret;
     }
@@ -1138,7 +1154,27 @@ static esp_err_t init_low_level(uint8_t mode)
 
     return ret;
 }
+
+void ble_init_controller(void)
+{
+    esp_err_t ret;
+    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+
+    ret = esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT);
+    if (ret) {
+        ESP_LOGE(TAG, "esp_bt_controller_mem_release failed: %d", ret);
+        return ;
+    }
+    ret = esp_bt_controller_init(&bt_cfg);
+    if (ret) {
+        ESP_LOGE(TAG, "esp_bt_controller_init failed: %d", ret);
+        return ;
+    }
+}
+
 #endif
+
+
 
 esp_err_t esp_hid_gap_init(uint8_t mode)
 {

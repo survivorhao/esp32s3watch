@@ -184,6 +184,9 @@ static void user_ble_start_handler(void* arg, esp_event_base_t event_base,
     ret = esp_hid_gap_init(HID_DEV_MODE);
     ESP_ERROR_CHECK( ret );
 
+    esp_bt_controller_status_t sta=esp_bt_controller_get_status();
+    ESP_LOGW(TAG,"gap init ble controller status is %d",sta);
+
     //config Security Manager Protocol and register advertise call back function
     ret = esp_hid_ble_gap_adv_init(ESP_HID_APPEARANCE_GENERIC, ble_hid_config.device_name);
     ESP_ERROR_CHECK(ret);
@@ -209,9 +212,15 @@ static void user_ble_start_handler(void* arg, esp_event_base_t event_base,
 
     ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
     ret = esp_nimble_enable(ble_hid_device_host_task);
-    if (ret) {
+    if (ret!=ESP_OK) {
         ESP_LOGE(TAG, "esp_nimble_enable failed: %d", ret);
     }
+    else
+    {
+
+        ESP_LOGI(TAG,"create ble_hid_device_host_task success");
+    }
+    
 
 
 }
@@ -252,18 +261,43 @@ static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
     }
 
 
-    //stop hid device 
-    esp_hidd_dev_deinit(s_ble_hid_param.hid_dev);
+    ble_gatts_reset();
+
+    
+    if (s_ble_hid_param.hid_dev) 
+    {
+        //stop hid device 
+        esp_hidd_dev_deinit(s_ble_hid_param.hid_dev);
+        s_ble_hid_param.hid_dev = NULL;
+    }
 
     esp_hid_gap_deinit();
 
-    nimble_port_stop();
+    ret=nimble_port_stop();
+    if(ret!=ESP_OK)
+    {
+        ESP_LOGE(TAG, "nimble_port_stop fail ");
+        return ;
+    }
 
-    nimble_port_deinit();
+    ret=nimble_port_deinit();
+    if(ret!=ESP_OK)
+    {
+        ESP_LOGE(TAG, "nimble_port_deinit fail ");
+        return ;
+    }
 
-    esp_bt_controller_disable();
-    
-    esp_bt_controller_deinit();
+
+    esp_bt_controller_status_t sta=esp_bt_controller_get_status();
+    ESP_LOGW(TAG,"ble controller status is %d",sta);
+
+    // ret=esp_bt_controller_disable();
+    // if (ret != ESP_OK) {
+    //     ESP_LOGE(TAG, "disable ble controller fail %d", ret);
+    // }
+
+
+    // esp_bt_controller_deinit();
 
     vSemaphoreDelete(s_ble_hid_param.deinit_sem);
     s_ble_hid_param.deinit_sem = NULL;
