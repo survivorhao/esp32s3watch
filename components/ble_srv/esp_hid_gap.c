@@ -31,6 +31,9 @@ static const char *TAG = "ESP_HID_GAP";
 #define GAP_DBG_PRINTF(...) //printf(__VA_ARGS__)
 //static const char * gap_bt_prop_type_names[5] = {"","BDNAME","COD","RSSI","EIR"};
 
+//mutex to protect variable current_con_handle,to prevent race wirte and read
+SemaphoreHandle_t ble_con_mutex = NULL;          
+
 uint16_t current_con_handle;
 
 
@@ -853,12 +856,19 @@ nimble_hid_gap_event(struct ble_gap_event *event, void *arg)
         ESP_LOGW(TAG, "connection %s; status=%d,con_hanle=%d",
                 event->connect.status == 0 ? "established" : "failed",
                 event->connect.status, event->connect.conn_handle);
+        if (xSemaphoreTake(ble_con_mutex, pdMS_TO_TICKS(5000)) != pdTRUE) 
+        {
+            ESP_LOGE(TAG, "take ble_con_mutex timeout ");
+            return 0;
+
+        }
         current_con_handle=event->connect.conn_handle;
+        xSemaphoreGive(ble_con_mutex);
 
         return 0;
         break;
     case BLE_GAP_EVENT_DISCONNECT:
-        ESP_LOGI(TAG, "disconnect; reason=%d,con_handle= %d", event->disconnect.reason,
+        ESP_LOGW(TAG, "disconnect; reason=%d,con_handle= %d", event->disconnect.reason,
                                                         event->disconnect.conn.conn_handle);
 
         return 0;
@@ -1160,6 +1170,13 @@ esp_err_t esp_hid_gap_init(uint8_t mode)
         return ESP_FAIL;
     }
 
+    //create mutex which is used to prevent race write and read
+    ble_con_mutex = xSemaphoreCreateMutex();
+    if (ble_con_mutex == NULL) {
+        ESP_LOGE(TAG, "Failed to create WiFi mutex");
+        return ESP_FAIL;
+    }
+
     //初始化  Controller layer and BlueDroid  host  stack and 注册gap事件 Call Back 函数
     ret = init_low_level(mode);
     if (ret != ESP_OK) 
@@ -1168,11 +1185,31 @@ esp_err_t esp_hid_gap_init(uint8_t mode)
         bt_hidh_cb_semaphore = NULL;
         vSemaphoreDelete(ble_hidh_cb_semaphore);
         ble_hidh_cb_semaphore = NULL;
+
+        vSemaphoreDelete(ble_con_mutex);
+        ble_con_mutex = NULL;
+
         return ret;
     }
 
     return ESP_OK;
 }
+
+void esp_hid_gap_deinit(void)
+{
+    
+
+    vSemaphoreDelete(bt_hidh_cb_semaphore);
+    vSemaphoreDelete(ble_hidh_cb_semaphore);
+    vSemaphoreDelete(ble_con_mutex);
+
+    bt_hidh_cb_semaphore=NULL;
+    ble_hidh_cb_semaphore=NULL;
+    ble_con_mutex=NULL;
+
+
+}
+
 
 #if !CONFIG_BT_NIMBLE_ENABLED
 esp_err_t esp_hid_scan(uint32_t seconds, size_t *num_results, esp_hid_scan_result_t **results)
@@ -1221,5 +1258,7 @@ esp_err_t esp_hid_scan(uint32_t seconds, size_t *num_results, esp_hid_scan_resul
 
 uint16_t ble_get_conn_handle(void)
 {
+    ESP_LOGW(TAG,"ble_get_conn_handle =%d",current_con_handle);
+
     return current_con_handle;
 }

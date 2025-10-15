@@ -233,7 +233,7 @@ static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
         ret = ble_gap_terminate(s_ble_hid_param.conn_handle, BLE_ERR_CONN_TERM_LOCAL);
         if (ret == 0||ret==7) 
         {
-            ESP_LOGI(TAG,"ble_gap_terminate ret=%d,pass in con_handle =%d",ret,s_ble_hid_param.conn_handle);
+            ESP_LOGW(TAG,"ble_gap_terminate ret=%d,pass in con_handle =%d",ret,s_ble_hid_param.conn_handle);
 
         }
         else
@@ -254,6 +254,8 @@ static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
 
     //stop hid device 
     esp_hidd_dev_deinit(s_ble_hid_param.hid_dev);
+
+    esp_hid_gap_deinit();
 
     nimble_port_stop();
 
@@ -278,10 +280,13 @@ static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, i
     esp_hidd_event_data_t *param = (esp_hidd_event_data_t *)event_data;
     
 
-    switch (event) {
+    switch (event) 
+    {
     case ESP_HIDD_START_EVENT: 
     {
         ESP_LOGI(TAG, "START");
+
+        //start advertise
         esp_hid_ble_gap_adv_start();
         break;
     }
@@ -291,7 +296,14 @@ static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, i
         
         //indicate success build connection
         s_ble_hid_param.connected = true;
+        if (xSemaphoreTake(ble_con_mutex, pdMS_TO_TICKS(5000)) != pdTRUE) 
+        {
+            ESP_LOGE(TAG, "take ble_con_mutex timeout ");
+            return ;
+
+        }
         s_ble_hid_param.conn_handle=ble_get_conn_handle();
+        xSemaphoreGive(ble_con_mutex);
 
         ESP_LOGW(TAG,"set con_handle=%d",s_ble_hid_param.conn_handle);
         
@@ -329,12 +341,16 @@ static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, i
         // ble_hid_task_shut_down();
         s_ble_hid_param.connected = false;
 
-        //when in progress of deiniting
+        //judge whether in progress of deiniting
         if (s_ble_hid_param.is_deinitializing) 
         {
             xSemaphoreGive(s_ble_hid_param.deinit_sem);
+            ESP_LOGW(TAG,"give deinit sema success");
             s_ble_hid_param.is_deinitializing = false;
         }
+        //post ble connection close  event 
+        ESP_ERROR_CHECK(esp_event_post_to(ui_event_loop_handle, APP_EVENT, 
+                                    APP_BLE_CONNECTION_CLOSE, NULL, 0, portMAX_DELAY));
 
         esp_hid_ble_gap_adv_start();
 

@@ -208,6 +208,7 @@ void my_ui_task(void *par)
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, APP_BLE_CONNECTION_CLOSE, 
                                 ble_connection_close_handler, NULL));
 
+
     ui_message_t received_msg;
     while (1) 
     {
@@ -503,9 +504,12 @@ void my_ui_task(void *par)
                                         lv_obj_align(ui_ble_pass_label,LV_ALIGN_CENTER,0,10);
                                     }
 
-                                    int  pass=((int)*((uint32_t *)received_msg.data));
+                                    int  pass=(int)(*((uint32_t *)received_msg.data));
                                     lv_label_set_text_fmt(ui_ble_pass_label,"pass: %06d", pass);
                                     lv_obj_clear_flag(ui_ble_pass_label, LV_OBJ_FLAG_HIDDEN);      // Flags
+                                    
+                                    free(received_msg.data);
+
                                 }
                         break;
                             
@@ -541,6 +545,7 @@ void my_ui_task(void *par)
                                 }
 
                         break; 
+
                         default: break;    
                 }
 
@@ -727,7 +732,8 @@ static void sd_refresh_response_handler(void* arg, esp_event_base_t event_base,
                             int32_t event_id, void* event_data)
 {
 
-    //Since event_data will be released after this handler exits, a copy of it on heap needs to be made.
+    //Since event_data will be released after this handler exits, 
+    //a copy of it on heap needs to be made.
     file_refresh_res_data_t  *cp_data= heap_caps_malloc( sizeof(file_refresh_res_data_t), MALLOC_CAP_SPIRAM |MALLOC_CAP_8BIT);
 
     
@@ -745,11 +751,14 @@ static void sd_refresh_response_handler(void* arg, esp_event_base_t event_base,
 static void ble_pair_pass_entry_res_handler(void* arg, esp_event_base_t event_base, 
                                             int32_t event_id, void* event_data)
 {
-    uint32_t pass_entry=*((uint32_t *)event_data);
+    //Since event_data will be released after this handler exits, 
+    //a copy of it on heap needs to be made.
+    uint32_t *pass_entry=(uint32_t *)malloc(sizeof(uint32_t ));
+    *pass_entry=*((uint32_t *)event_data);
 
     ui_message_t msg;
     msg.type=UI_MSG_BLE_PAIR_PASS_ENTRY;
-    msg.data=(void *)&pass_entry;
+    msg.data=(void *)pass_entry;
     
     xQueueSend(ui_message_queue, &msg, portMAX_DELAY);
 
@@ -788,6 +797,8 @@ static void ble_connection_close_handler(void* arg, esp_event_base_t event_base,
 
 
 }
+
+
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
