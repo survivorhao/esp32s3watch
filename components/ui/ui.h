@@ -21,6 +21,8 @@ extern "C" {
 #include <string.h>
 #include "nvs_flash.h"
 #include "esp_err.h"
+#include <stdint.h>
+
 
 ///////////////////// SCREENS ////////////////////
 

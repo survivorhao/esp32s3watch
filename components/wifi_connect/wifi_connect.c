@@ -149,7 +149,7 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
     {
        switch (event_id) 
        {
-        //esp_wifi_start  成功
+        //esp_wifi_start() successfully call
         case WIFI_EVENT_STA_START:
 
             if(current_wifi_state == WIFI_STATE_INITING) 
@@ -157,7 +157,7 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
                 current_wifi_state = WIFI_STATE_IDLE;
                 ESP_LOGI(TAG, "WiFi started successfully, state -> IDLE");
                 
-                // 可选：如果 START 事件意图是 scan，这里可以自动触发 scan
+                //automatic scan nearby wifi
                 ESP_LOGI(TAG,"wifi scan begin,idle -> busy");
                 current_wifi_state = WIFI_STATE_BUSY;
                 esp_wifi_scan_start(NULL, false);  // 非阻塞
@@ -170,8 +170,6 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
 
             }
 
-    
-            
             break;
         
         //sta stop event
@@ -211,10 +209,11 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
                     ap_fetch_count = 5;
                 }
 
-                // 根据你打算获取的数量来分配内存
-                wifi_ap_record_t *ap_records = (wifi_ap_record_t *)malloc( sizeof(wifi_ap_record_t) * ap_fetch_count);
-
-                // 调用函数，传入你分配的内存大小，并让它告诉你实际获取的数量
+                // malloc memory to store scan ap records
+                wifi_ap_record_t *ap_records = (wifi_ap_record_t *)
+                heap_caps_malloc(sizeof(wifi_ap_record_t) * ap_fetch_count, MALLOC_CAP_SPIRAM| MALLOC_CAP_8BIT);
+                
+                // gey ap records
                 ESP_ERROR_CHECK(esp_wifi_scan_get_ap_records(&ap_fetch_count, ap_records));
 
                 wifi_scan_done_data_t data = {.ap_count = ap_fetch_count, .ap_records = ap_records};

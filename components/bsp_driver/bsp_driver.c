@@ -165,7 +165,7 @@ esp_err_t bsp_display_new(void)
         .quadwp_io_num = GPIO_NUM_NC,
         .quadhd_io_num = GPIO_NUM_NC,
         // .max_transfer_sz = BSP_LCD_H_RES * BSP_LCD_V_RES * sizeof(uint16_t),
-        .max_transfer_sz = BSP_LCD_V_RES *40* sizeof(uint16_t),
+        .max_transfer_sz = BSP_LCD_V_RES *20* sizeof(uint16_t),
     };
     ESP_RETURN_ON_ERROR(spi_bus_initialize(BSP_LCD_SPI_NUM, &buscfg, SPI_DMA_CH_AUTO), TAG, "SPI init failed");
     

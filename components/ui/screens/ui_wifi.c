@@ -5,6 +5,10 @@
 
 #include "../ui.h"
 
+//wifi state flag , 1 means wifi is working
+uint8_t ui_wifi_working;
+
+
 lv_obj_t * ui_wifi = NULL;
 lv_obj_t * ui_Switch1 = NULL;
 lv_obj_t * ui_WifiOffImage = NULL;
@@ -17,12 +21,36 @@ void ui_event_Switch1(lv_event_t * e)
     lv_event_code_t event_code = lv_event_get_code(e);
     lv_obj_t * target = lv_event_get_target(e);
 
+    //wifi open state
     if(event_code == LV_EVENT_VALUE_CHANGED &&  lv_obj_has_state(target, LV_STATE_CHECKED)) 
     {
+        //if ble is working ,ignore this request to start wifi
+        if(ui_ble_working==1)
+        {
+            //clear switch check state
+            lv_obj_clear_state(target, LV_STATE_CHECKED);
+
+            //disable switch widget until ble stop working
+            lv_obj_add_state(target, LV_STATE_DISABLED);
+
+            ui_wifi_working=0;
+
+            return ;
+        }
+
+        //if ble is not working ,send wifi start request,change state flag =1
+        ui_wifi_working=1;
+
         startWifi(e);
     }
+    //wifi close state
     else if(event_code == LV_EVENT_VALUE_CHANGED &&  lv_obj_has_state(target, LV_STATE_CHECKED)==false)
     {
+        //remove ble switch's disabled state, allow ble work
+        lv_obj_clear_state(ui_switch2, LV_STATE_DISABLED);
+
+        //change flag
+        ui_wifi_working=0;
 
         shutoffWifi(e);
 
@@ -44,6 +72,9 @@ void ui_event_Image2(lv_event_t * e)
 
 void ui_wifi_screen_init(void)
 {
+    //indicate not working
+    ui_wifi_working=0;
+
     ui_wifi = lv_obj_create(NULL);
     lv_obj_clear_flag(ui_wifi, LV_OBJ_FLAG_SCROLLABLE);      /// Flags
     lv_obj_set_style_bg_color(ui_wifi, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);

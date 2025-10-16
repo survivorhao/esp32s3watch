@@ -12,9 +12,12 @@ extern "C" {
 
 extern lv_obj_t *ui_bt;
 
+extern uint8_t ui_ble_working;
 
 //play/pause button
 extern lv_obj_t *g_btn_play_pause;
+
+extern lv_obj_t *ui_switch2;
 
 void ui_bt_screen_init(void);
 

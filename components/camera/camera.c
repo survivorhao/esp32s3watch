@@ -535,7 +535,7 @@ static void user_camera_init_handler(void* arg, esp_event_base_t event_base, int
 
 
     }
-    vTaskDelay(200);
+    vTaskDelay(pdMS_TO_TICKS(2000));
     if(bsp_camera_init() == ESP_OK)
     {
 

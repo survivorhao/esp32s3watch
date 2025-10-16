@@ -24,10 +24,19 @@ lv_obj_t *lightness_slider=NULL;
 lv_obj_t *slider_label=NULL;
 lv_obj_t *lightness_exit_but=NULL;
 
+
+
+lv_obj_t *ram_use_screen=NULL;
+lv_obj_t *ram_use_exit_but=NULL;
+lv_obj_t *psram_label=NULL;
+lv_obj_t *inter_ram_label=NULL;
+
+
+
 static const char *TAG="ui_setting ";
 
 //total setting options number is 
-#define TOTAL_SETTING_OPTIONS    3
+#define TOTAL_SETTING_OPTIONS    4
 
 
 
@@ -36,7 +45,7 @@ static const char *TAG="ui_setting ";
 //---------------------------------------start---------------------------------------------------
 void weather_pos_handler(void *arg);
 void lightness_adjust_handler(void *arg);
-
+void ram_use_info_handler(void *arg);
 
 //---------------------------------------end---------------------------------------------------
 //---------------------------------------------------------------------------------------------
@@ -48,13 +57,14 @@ void lightness_adjust_handler(void *arg);
 void save_custom_setting_to_nvs(void);
 void append_city(char *arr, size_t arr_size, const char *city);
 void nvs_store_weather_pos_load(void);
+void get_ram_use(void);
 
 //setting array,which will be argument as lv_list_add_btn
 static char   Setting_option_array[10][64]={
                     "screen ligntness ", 
                     "weather position ",
-                    "author:survivorhao "
-                    "",
+                    "author: survivorhao ",
+                    "ram use info",
                     "",
 
                     "",
@@ -62,7 +72,6 @@ static char   Setting_option_array[10][64]={
                     "",
                     "",
                     "",
-                    
 };
 
 //each setting option coule have a handler which can be registered here, type is void (*handler)(void *) 
@@ -70,7 +79,7 @@ static const void (*Setting_option_handler[10])(void *)={
                     lightness_adjust_handler,
                     weather_pos_handler,
                     NULL,
-                    NULL,
+                    ram_use_info_handler,
                     NULL,
 
                     NULL,
@@ -231,6 +240,28 @@ void ui_lightness_return_event_cb(lv_event_t * e)
 
 
 
+/// @brief click this button to return to previous screen 
+/// @param e 
+void ui_ram_use_return_event_cb(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) 
+    {
+
+        _ui_screen_change(&ui_setting, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_setting_screen_init);     
+        
+        if(ram_use_screen)
+        {
+            lv_obj_del_delayed(ram_use_screen,200);
+            ram_use_screen=NULL;
+
+
+
+        }
+    }
+}
+
 
 /// @brief 
 /// @param  
@@ -384,6 +415,50 @@ void ui_lightness_screen_init(void)
     
 
 }
+
+void ui_ram_use_screen_init(void) 
+{
+    ram_use_screen = lv_obj_create(NULL);  
+    lv_obj_set_style_bg_color(ram_use_screen, lv_color_hex(0xffffff), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(ram_use_screen, 255, LV_PART_MAIN);
+    lv_obj_clear_flag(ram_use_screen, LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+    LV_OBJ_FLAG_SCROLL_CHAIN|LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+
+    //create exit button (which be pressed will change current display to before one )
+    ram_use_exit_but = lv_img_create(ram_use_screen);
+    lv_img_set_src(ram_use_exit_but , &ui_img_return_png);
+    lv_obj_set_width(ram_use_exit_but , LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(ram_use_exit_but , LV_SIZE_CONTENT);    /// 1
+    lv_obj_align(ram_use_exit_but , LV_ALIGN_TOP_MID, -90, -80);
+    lv_obj_add_flag(ram_use_exit_but , LV_OBJ_FLAG_CLICKABLE);     /// Flags
+    lv_obj_clear_flag(ram_use_exit_but , LV_OBJ_FLAG_PRESS_LOCK | LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_GESTURE_BUBBLE |
+                        LV_OBJ_FLAG_SNAPPABLE  | LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+                        LV_OBJ_FLAG_SCROLL_CHAIN);     /// Flags
+    lv_img_set_zoom(ram_use_exit_but , 50);
+    lv_obj_set_style_bg_color(ram_use_exit_but , lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ram_use_exit_but , 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_set_style_img_recolor(ram_use_exit_but , lv_color_hex(0x000000), LV_PART_MAIN );
+    lv_obj_set_style_img_recolor_opa(ram_use_exit_but , 0, LV_PART_MAIN);
+    lv_obj_add_event_cb(ram_use_exit_but , ui_ram_use_return_event_cb, LV_EVENT_CLICKED, NULL); 
+
+
+    psram_label=lv_label_create(ram_use_screen);
+    lv_obj_set_style_text_align(psram_label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(psram_label, LV_ALIGN_TOP_MID, 0, 20);
+
+
+    inter_ram_label = lv_label_create(ram_use_screen);
+    lv_obj_set_style_text_align(inter_ram_label, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(inter_ram_label, LV_ALIGN_TOP_MID, 0, 100);
+
+    //get ram info and set label content
+    get_ram_use();
+
+
+}
+
+
 void weather_pos_handler(void *arg)
 {
     _ui_screen_change(&weather_pos, LV_SCR_LOAD_ANIM_NONE, 300, 0, ui_weather_pos_screen_init);
@@ -396,6 +471,14 @@ void lightness_adjust_handler(void *arg)
 
 
 }
+
+void ram_use_info_handler(void *arg)
+{
+
+    _ui_screen_change(&ram_use_screen, LV_SCR_LOAD_ANIM_NONE, 300, 0, ui_ram_use_screen_init);
+}
+
+
 /// @brief save intput weather position to nvs
 /// @param  
 void save_custom_setting_to_nvs(void)
@@ -441,3 +524,45 @@ void append_city(char *arr, size_t arr_size, const char *city)
     strcat(arr, city);
 }
 
+
+
+void get_ram_use(void)
+{
+    multi_heap_info_t info;
+    char buffer[128];
+    // Default heap
+    heap_caps_get_info(&info, MALLOC_CAP_DEFAULT);
+
+    unsigned int  total_size= (unsigned)heap_caps_get_total_size(MALLOC_CAP_DEFAULT);
+    unsigned int free_size= (unsigned)info.total_free_bytes;
+
+    
+    snprintf(buffer, sizeof(buffer), 
+             "psram:\n"
+             "total size : %u\n"
+             "free size   : %u",
+             total_size,
+             free_size
+            );
+
+    lv_label_set_text(psram_label,buffer);
+    
+
+
+    // Internal RAM heap
+    heap_caps_get_info(&info, MALLOC_CAP_INTERNAL);
+    
+    total_size= (unsigned)heap_caps_get_total_size(MALLOC_CAP_INTERNAL);
+    free_size= (unsigned)info.total_free_bytes;
+
+    snprintf(buffer, sizeof(buffer), 
+            "psram:\n"
+            "total size : %u\n"
+            "free size   : %u",
+            total_size,
+            free_size
+            );
+
+    lv_label_set_text(inter_ram_label,buffer);        
+
+}

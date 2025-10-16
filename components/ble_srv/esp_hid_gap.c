@@ -25,21 +25,20 @@
 #include "host/ble_sm.h"
 #endif
 
+
+#include "event.h"
+
 static const char *TAG = "ESP_HID_GAP";
 
 // uncomment to print all devices that were seen during a scan
 #define GAP_DBG_PRINTF(...) //printf(__VA_ARGS__)
 //static const char * gap_bt_prop_type_names[5] = {"","BDNAME","COD","RSSI","EIR"};
 
-//mutex to protect variable current_con_handle,to prevent race wirte and read
-SemaphoreHandle_t ble_con_mutex = NULL;          
-
-uint16_t current_con_handle;
+        
 
 
 
-//use this api to get connection handle as the same time make sure component decoupling
-uint16_t ble_get_conn_handle(void);
+
 
 
 #if !CONFIG_BT_NIMBLE_ENABLED
@@ -857,21 +856,11 @@ nimble_hid_gap_event(struct ble_gap_event *event, void *arg)
                 event->connect.status == 0 ? "established" : "failed",
                 event->connect.status, event->connect.conn_handle);
         
-        if (xSemaphoreTake(ble_con_mutex, pdMS_TO_TICKS(5000)) != pdTRUE) 
-        {
-            ESP_LOGE(TAG, "take ble_con_mutex timeout ");
-            return 0;
+        //notify to save connection handle
+        ESP_ERROR_CHECK(esp_event_post_to(ui_event_loop_handle, APP_EVENT, 
+                                APP_BLE_SET_CONN_HANDLE, &(event->connect.conn_handle), sizeof(event->connect.conn_handle), portMAX_DELAY));
 
-        }
-        ESP_LOGW(TAG,"before event->connect.conn_handle =%d,current_con_handle=%d",event->connect.conn_handle
-        ,current_con_handle);
-
-        current_con_handle=event->connect.conn_handle;
-        
-        ESP_LOGW(TAG,"after event->connect.conn_handle =%d,current_con_handle=%d",event->connect.conn_handle
-        ,current_con_handle);
-        xSemaphoreGive(ble_con_mutex);
-
+    
         return 0;
         break;
     case BLE_GAP_EVENT_DISCONNECT:
@@ -922,7 +911,13 @@ nimble_hid_gap_event(struct ble_gap_event *event, void *arg)
         {
             //post pair success event
             ESP_ERROR_CHECK(esp_event_post_to(ui_event_loop_handle, APP_EVENT, 
-                                    APP_BLE_PAIR_SUCCESS, NULL, 0, portMAX_DELAY));    
+                                    APP_BLE_PAIR_SUCCESS, NULL, 0, portMAX_DELAY));
+                                    
+            //notify to save connection handle
+            ESP_ERROR_CHECK(esp_event_post_to(ui_event_loop_handle, APP_EVENT, 
+                        APP_BLE_SET_CONN_HANDLE, &(event->enc_change.conn_handle), 
+                        sizeof(event->enc_change.conn_handle), portMAX_DELAY));
+
         }
         
         
@@ -1131,10 +1126,6 @@ static esp_err_t init_low_level(uint8_t mode)
     }
 
     ret = esp_bt_controller_enable(mode);
-    // if (ret==ESP_OK ||ret==ESP_ERR_INVALID_STATE ) 
-    // {
-
-    // }else 
     if (ret==ESP_OK) 
     {
 
@@ -1206,12 +1197,6 @@ esp_err_t esp_hid_gap_init(uint8_t mode)
         return ESP_FAIL;
     }
 
-    //create mutex which is used to prevent race write and read
-    ble_con_mutex = xSemaphoreCreateMutex();
-    if (ble_con_mutex == NULL) {
-        ESP_LOGE(TAG, "Failed to create WiFi mutex");
-        return ESP_FAIL;
-    }
 
     //初始化  Controller layer and BlueDroid  host  stack and 注册gap事件 Call Back 函数
     ret = init_low_level(mode);
@@ -1222,8 +1207,6 @@ esp_err_t esp_hid_gap_init(uint8_t mode)
         vSemaphoreDelete(ble_hidh_cb_semaphore);
         ble_hidh_cb_semaphore = NULL;
 
-        vSemaphoreDelete(ble_con_mutex);
-        ble_con_mutex = NULL;
 
         return ret;
     }
@@ -1234,14 +1217,11 @@ esp_err_t esp_hid_gap_init(uint8_t mode)
 void esp_hid_gap_deinit(void)
 {
     
-
     vSemaphoreDelete(bt_hidh_cb_semaphore);
     vSemaphoreDelete(ble_hidh_cb_semaphore);
-    vSemaphoreDelete(ble_con_mutex);
 
     bt_hidh_cb_semaphore=NULL;
     ble_hidh_cb_semaphore=NULL;
-    ble_con_mutex=NULL;
 
 
 }
@@ -1292,9 +1272,3 @@ esp_err_t esp_hid_scan(uint32_t seconds, size_t *num_results, esp_hid_scan_resul
 
 
 
-uint16_t ble_get_conn_handle(void)
-{
-    ESP_LOGW(TAG,"ble_get_conn_handle =%d",current_con_handle);
-
-    return current_con_handle;
-}

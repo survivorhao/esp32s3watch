@@ -114,7 +114,7 @@ static void user_sntp_srv_handler(void* arg, esp_event_base_t event_base, int32_
     {
         retry_count++;
 
-        vTaskDelay(100);
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
     

@@ -80,11 +80,6 @@ void esp_hid_gap_deinit(void);
 void ble_init_controller(void);
 
 
-extern SemaphoreHandle_t ble_con_mutex;  
-
-//use this api to get connection handle as the same time make sure component decoupling
-uint16_t ble_get_conn_handle(void);
-
 
 esp_err_t esp_hid_ble_gap_adv_init(uint16_t appearance, const char *device_name);
 esp_err_t esp_hid_ble_gap_adv_start(void);

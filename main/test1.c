@@ -89,8 +89,6 @@ void app_main(void)
     
     nvs_user_data_init();
     
-    // ble_init_controller();
-
     print_heap_caps_stats();
 
     //初始化 新版i2c驱动
@@ -102,6 +100,9 @@ void app_main(void)
     io_extend_init();
 
     ESP_ERROR_CHECK(app_lvgl_init());
+
+    // lvgl_port_stop();
+
 
     lv_disp_set_rotation(lvgl_disp, LV_DISPLAY_ROTATION_90);
 
@@ -118,22 +119,13 @@ void app_main(void)
     camera_register_camera_handler();
 
     ble_register_srv_handler();
-    
 
-    // print_heap_caps_stats();
-
-    xTaskCreatePinnedToCore(wifi_task,"my_wifi_task",8192,NULL,1,NULL,1 );
-
-    // print_heap_caps_stats();
+    xTaskCreatePinnedToCore(wifi_task,"my_wifi_task",4096,NULL,1,NULL,1 );
 
     xTaskCreatePinnedToCore(my_ui_task,"my_ui_task",8192,NULL,4,NULL,1 );
     
 
-
-
-
-
-
+    
     // 订阅UI任务发布的事件
     // ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_WIFI_SCAN_START, &my_test_printf_hesp_info, NULL));
     // ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_GET_IP, &my_test_printf_hesp_info, NULL));

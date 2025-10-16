@@ -10,6 +10,9 @@
 extern "C" {
 #endif
 
+//wifi state flag , 1 means wifi is working
+extern uint8_t ui_wifi_working;
+
 // SCREEN: ui_wifi
 extern void ui_wifi_screen_init(void);
 extern void ui_wifi_screen_destroy(void);

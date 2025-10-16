@@ -75,7 +75,70 @@ const unsigned char mediaReportMap[] = {
     0xC0              // End Collection
 };
 
+//below is usage defination,when Usage page=Consumer Page
+//for details please refer to https://usb.org/document-library/hid-usage-tables-16
+//https://www.usb.org/hid
 
+#define HID_CONSUMER_VOLUME_UP      0xe9 // Volume Increment
+#define HID_CONSUMER_VOLUME_DOWN    0xea // Volume Decrement
+#define HID_CONSUMER_PLAY_PAUSE     0xcd // Play/Pause
+#define HID_CONSUMER_SCAN_NEXT_TRACK     0xb5 // scan next track 
+#define HID_CONSUMER_SCAN_PREVIOUS_TRACK     0xb6 // scan previous track 
+
+#define HID_RPT_ID_CC_IN        3   // Consumer Control input report ID
+#define HID_CC_IN_RPT_LEN       2   // Consumer Control input report Len
+
+
+//report buffer use to store byte which be sent to ble hid host
+uint8_t report_buffer[2] = {0, 0};
+
+
+//Define the bitmask occupied by all media keys in the first data byte (s[0]).
+#define HID_CC_ALL_MEDIA_BITS       0x1F  // 0001 1111b (Bit 0 - Bit 4)
+
+//different consumer control occupy bitmask
+#define HID_CC_VOLUME_BITS          0x18  // Bit 3 (Vol Up) & Bit 4 (Vol Down)
+#define HID_CC_TRACK_BITS           0x03  // Bit 0 (Next) & Bit 1 (Prev)
+#define HID_CC_PLAY_PAUSE_BIT       0x04  // Bit 2 (Play/Pause)
+
+
+
+//set Volume Increment   Bit 3 (0x08)
+#define HID_CC_RPT_SET_VOLUME_UP(s)     (s)[0] &= (~HID_CC_VOLUME_BITS); \
+                                        (s)[0] |= 0x08
+//release Volume Increment   Bit 3 (0x08)
+#define HID_CC_RPT_RELEASE_VOLUME_UP(s)     (s)[0] &=(~ HID_CC_VOLUME_BITS);  
+
+
+// set Volume Decrement  Bit 4 (0x10)
+#define HID_CC_RPT_SET_VOLUME_DOWN(s)   (s)[0] &= (~HID_CC_VOLUME_BITS); \
+                                        (s)[0] |= 0x10
+
+// release Volume Decrement  Bit 4 (0x10)
+#define HID_CC_RPT_RELEASE_VOLUME_DOWN(s)     (s)[0] &=(~ HID_CC_VOLUME_BITS);  
+
+//set Play/Pause Bit 2 (0x04)
+#define HID_CC_RPT_SET_PLAY_PAUSE(s)    (s)[0] &= (~HID_CC_PLAY_PAUSE_BIT); \
+                                        (s)[0] |= 0x04
+
+// release Play/Pause Bit 2 (0x04)
+#define HID_CC_RPT_RELEASE_PLAY_PAUSE(s)    (s)[0] &= (~HID_CC_PLAY_PAUSE_BIT); 
+                                     
+
+// set Scan Next Track  Bit 0 (0x01)
+#define HID_CC_RPT_SET_NEXT_TRACK(s)    (s)[0] &= (~HID_CC_TRACK_BITS); \
+                                        (s)[0] |= 0x01
+
+#define HID_CC_RPT_RELEASE_NEXT_TRACK(s)     (s)[0] &=(~ HID_CC_TRACK_BITS);
+
+// set Scan Previous Track Bit 1 (0x02)
+#define HID_CC_RPT_SET_PREV_TRACK(s)    (s)[0] &= (~HID_CC_TRACK_BITS); \
+                                        (s)[0] |= 0x02
+
+#define HID_CC_RPT_RELEASE_PREV_TRACK(s)     (s)[0] &=(~ HID_CC_TRACK_BITS);
+
+
+//HID raw report map 
 static esp_hid_raw_report_map_t ble_report_maps[] = {
     
     {
@@ -96,13 +159,13 @@ static esp_hid_device_config_t ble_hid_config = {
 
     .manufacturer_name  = "Espressif",
     .serial_number      = "1234567890",
-    .report_maps        = ble_report_maps,         //report  descriptor  array,可以包含多个report descriptor
-    .report_maps_len    = 1  ,                      //report  descriptor  array中的元素数量
+    .report_maps        = ble_report_maps,   //report  descriptor  array,may include many report descriptors
+    .report_maps_len    = 1  ,               //the number of report  descriptor  array
 
-    //如果设备有多个应用集合（Application Collection）或多个接口，就可能有多个 report map。
-    // 比如键盘 + 鼠标一体机（组合 HID 设备），就可能需要两个 report map                  
-
-
+    // If a device has multiple Application Collections or multiple interfaces, 
+    //there may be multiple report maps.
+    // For example, an all-in-one device with a keyboard and mouse (a combined HID device) 
+    //may require two report maps.               
 
 };  
 
@@ -125,13 +188,22 @@ static void user_ble_pair_pass_entry_handler(void* arg, esp_event_base_t event_b
 static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
                                            int32_t event_id, void* event_data);
 
+                                           
+static void user_ble_set_conn_handle_handler(void* arg, esp_event_base_t event_base,
+                                           int32_t event_id, void* event_data);
+
+static void user_pair_success_handler(void* arg, esp_event_base_t event_base,
+                                           int32_t event_id, void* event_data);
+
+static void user_consumer_control_handler(void* arg, esp_event_base_t event_base,
+int32_t event_id, void* event_data);
+
 
 static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, 
                                            int32_t id, void *event_data);
 
-void ble_hid_task_start_up(void);
+void esp_hidd_send_consumer_control(uint8_t key_cmd, bool key_pressed);
 
-void ble_hid_task_shut_down(void);
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
@@ -160,12 +232,19 @@ void ble_store_config_init(void);
 void ble_register_srv_handler(void)
 {
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, 
-                                        APP_BLE_START, user_ble_start_handler, NULL));
+                                    APP_BLE_START, user_ble_start_handler, NULL));
 
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, 
-                                        APP_BLE_CLOSE, user_ble_close_handler, NULL));
+                                    APP_BLE_CLOSE, user_ble_close_handler, NULL));
 
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, 
+                                    APP_BLE_SET_CONN_HANDLE, user_ble_set_conn_handle_handler, NULL));
     
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, 
+                                    APP_BLE_PAIR_SUCCESS, user_pair_success_handler, NULL));
+
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, 
+                                APP_BLE_CONSUMER_CONTROL, user_consumer_control_handler, NULL));
 }
 
 
@@ -182,7 +261,7 @@ static void user_ble_start_handler(void* arg, esp_event_base_t event_base,
 
     //初始化  Controller layer and BlueDroid  host  stack and 注册gap事件 Call Back 函数 and   创建信号量
     ret = esp_hid_gap_init(HID_DEV_MODE);
-    ESP_ERROR_CHECK( ret );
+    ESP_ERROR_CHECK(ret);
 
     esp_bt_controller_status_t sta=esp_bt_controller_get_status();
     ESP_LOGW(TAG,"gap init ble controller status is %d",sta);
@@ -237,13 +316,15 @@ static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
     }
 
     // Terminate connection if active
-    if (s_ble_hid_param.connected) {
+    if (s_ble_hid_param.connected) 
+    {
         s_ble_hid_param.is_deinitializing = true;
         ret = ble_gap_terminate(s_ble_hid_param.conn_handle, BLE_ERR_CONN_TERM_LOCAL);
-        if (ret == 0||ret==7) 
+        
+        //terminate connection success or no current connection
+        if (ret == 0||ret==BLE_HS_ENOTCONN) 
         {
             ESP_LOGW(TAG,"ble_gap_terminate ret=%d,pass in con_handle =%d",ret,s_ble_hid_param.conn_handle);
-
         }
         else
         {
@@ -260,7 +341,7 @@ static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
         }
     }
 
-
+    //reset gatt server
     ble_gatts_reset();
 
     
@@ -291,13 +372,6 @@ static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
     esp_bt_controller_status_t sta=esp_bt_controller_get_status();
     ESP_LOGW(TAG,"ble controller status is %d",sta);
 
-    // ret=esp_bt_controller_disable();
-    // if (ret != ESP_OK) {
-    //     ESP_LOGE(TAG, "disable ble controller fail %d", ret);
-    // }
-
-
-    // esp_bt_controller_deinit();
 
     vSemaphoreDelete(s_ble_hid_param.deinit_sem);
     s_ble_hid_param.deinit_sem = NULL;
@@ -307,6 +381,43 @@ static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
 }
 
 
+
+static void user_ble_set_conn_handle_handler(void* arg, esp_event_base_t event_base,
+                                           int32_t event_id, void* event_data)
+{
+    if(event_data!=NULL)
+    {
+        s_ble_hid_param.conn_handle=*((uint16_t *)event_data);
+
+        ESP_LOGI(TAG,"now conn handle=%d",s_ble_hid_param.conn_handle);
+
+    }
+
+}
+
+static void user_pair_success_handler(void* arg, esp_event_base_t event_base,
+                                           int32_t event_id, void* event_data)
+{
+
+
+
+
+
+}
+
+//Receive the BLE consumer control events generated by clicking the button widget.
+static void user_consumer_control_handler(void* arg, esp_event_base_t event_base,
+                                           int32_t event_id, void* event_data)
+{
+    if(event_data!=NULL)
+    {
+        uint8_t control=*((uint8_t *)event_data);
+        esp_hidd_send_consumer_control(control,true);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        esp_hidd_send_consumer_control(control,false);
+
+    }
+}
 
 static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
 {
@@ -326,21 +437,9 @@ static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, i
     }
     case ESP_HIDD_CONNECT_EVENT: {
         ESP_LOGI(TAG, "CONNECT");
-        // ble_hid_task_start_up();
         
         //indicate success build connection
         s_ble_hid_param.connected = true;
-        if (xSemaphoreTake(ble_con_mutex, pdMS_TO_TICKS(5000)) != pdTRUE) 
-        {
-            ESP_LOGE(TAG, "take ble_con_mutex timeout ");
-            return ;
-
-        }
-        s_ble_hid_param.conn_handle=ble_get_conn_handle();
-        xSemaphoreGive(ble_con_mutex);
-
-        ESP_LOGW(TAG,"set con_handle=%d",s_ble_hid_param.conn_handle);
-        
 
         break;
     }
@@ -352,11 +451,10 @@ static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, i
         ESP_LOGI(TAG, "CONTROL[%u]: %sSUSPEND", param->control.map_index, param->control.control ? "EXIT_" : "");
         if (param->control.control)
         {
-            // exit suspend
-            ble_hid_task_start_up();
-        } else {
-            // suspend
-            ble_hid_task_shut_down();
+
+        } else 
+        {
+
         }
     break;
     }
@@ -372,7 +470,7 @@ static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, i
     }
     case ESP_HIDD_DISCONNECT_EVENT: {
         ESP_LOGI(TAG, "DISCONNECT: %s", esp_hid_disconnect_reason_str(esp_hidd_dev_transport_get(param->disconnect.dev), param->disconnect.reason));
-        // ble_hid_task_shut_down();
+
         s_ble_hid_param.connected = false;
 
         //judge whether in progress of deiniting
@@ -402,51 +500,76 @@ static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, i
 }
 
 
-void ble_hid_demo_task(void *pvParameters)
+
+/// @brief 
+/// @param key_cmd ble hid device consumer control
+/// @param key_pressed whether pressed or released
+void esp_hidd_send_consumer_control(uint8_t key_cmd, bool key_pressed)
 {
-   
-    uint8_t  data_bufer=0;
-    uint8_t  temp_data=100;
-    while (1) 
+    
+    if (key_pressed) 
     {
-        vTaskDelay(100000);
-
-        if(data_bufer==1)
+        switch (key_cmd) 
         {
-            
-            // ESP_LOGI("mytset","-------------------button pressed message send to hid task,");
-            // esp_hidd_send_consumer_value(HID_CONSUMER_PLAY,true);
-        
-            vTaskDelay(10);
+        case HID_CONSUMER_VOLUME_UP:
+            ESP_LOGI(TAG, "Send the volume up");
+            HID_CC_RPT_SET_VOLUME_UP(report_buffer);
+            break;
 
-            // esp_hidd_send_consumer_value(HID_CONSUMER_PLAY,false);
+        case HID_CONSUMER_VOLUME_DOWN:
+            ESP_LOGI(TAG, "Send the volume down");
+            HID_CC_RPT_SET_VOLUME_DOWN(report_buffer);
+            break;
 
-            ESP_LOGI("mytest","");
+        case HID_CONSUMER_PLAY_PAUSE:
+            ESP_LOGI(TAG, "Send the play/pause");
+            HID_CC_RPT_SET_PLAY_PAUSE(report_buffer);
+            break;
 
+        case HID_CONSUMER_SCAN_NEXT_TRACK:
+            ESP_LOGI(TAG, "Send the next track");
+            HID_CC_RPT_SET_NEXT_TRACK(report_buffer);
+            break;
 
+        case HID_CONSUMER_SCAN_PREVIOUS_TRACK:
+            ESP_LOGI(TAG, "Send the prev track");
+            HID_CC_RPT_SET_PREV_TRACK(report_buffer);
+            break;
+
+ 
+        default:
+            break;
         }
-
     }
-}
+    else
+    {         
+        switch (key_cmd) 
+        {
+        case HID_CONSUMER_VOLUME_UP:
 
-void ble_hid_task_start_up(void)
-{
-    if (s_ble_hid_param.task_hdl) {
-        // Task already exists
-        return;
+        case HID_CONSUMER_VOLUME_DOWN:
+            ESP_LOGI(TAG, "release the volume operation");
+            HID_CC_RPT_RELEASE_VOLUME_UP(report_buffer);
+            break;
+
+        case HID_CONSUMER_PLAY_PAUSE:
+            ESP_LOGI(TAG, "release paly/pause");
+            HID_CC_RPT_RELEASE_PLAY_PAUSE(report_buffer);
+            break;
+
+        case HID_CONSUMER_SCAN_NEXT_TRACK:
+
+        case HID_CONSUMER_SCAN_PREVIOUS_TRACK:
+            ESP_LOGI(TAG, "release the track operation");
+            HID_CC_RPT_RELEASE_PREV_TRACK(report_buffer);
+            break;
+
+ 
+        default:
+            break;
+        }
     }
-    ESP_LOGI(TAG, "create hid task ");
 
-    xTaskCreate(ble_hid_demo_task, "ble_hid_demo_task", 3 * 1024, NULL, configMAX_PRIORITIES - 3,
-                &s_ble_hid_param.task_hdl);
-
-
-}
-
-void ble_hid_task_shut_down(void)
-{
-    if (s_ble_hid_param.task_hdl) {
-        vTaskDelete(s_ble_hid_param.task_hdl);
-        s_ble_hid_param.task_hdl = NULL;
-    }
+    esp_hidd_dev_input_set(s_ble_hid_param.hid_dev, 0, HID_RPT_ID_CC_IN, report_buffer, HID_CC_IN_RPT_LEN);
+    return;
 }

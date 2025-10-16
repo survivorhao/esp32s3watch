@@ -68,6 +68,10 @@ enum{
 
     APP_BLE_CONNECTION_CLOSE,
     
+    APP_BLE_SET_CONN_HANDLE,         //set ble connection handle
+
+    APP_BLE_CONSUMER_CONTROL,
+
 
     APP_BLE_CLOSE,
 
@@ -135,11 +139,11 @@ typedef struct
 
 #define  SD_PATH_MAX  128
 
-// 文件项结构体（FS -> UI）
+// file item struct
 typedef struct 
 {
     char name[32];
-    bool is_dir;
+    bool is_dir;       //whether is a directory or file ,1 mean directory
     
 } file_item_t;
 
