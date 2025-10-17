@@ -41,7 +41,8 @@ void ui_init(void)
     ui_app2_screen_init();
     // ui_camera_screen_init();
     ui_sd_browser_screen_init();
-
+    ui_bt_screen_init();
+    
 
     ui____initial_actions0 = lv_obj_create(NULL);
     lv_disp_load_scr(ui_lockScreen);

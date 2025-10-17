@@ -5,6 +5,11 @@
 #include    <stdint.h>
 #include    <inttypes.h>
 #include    "nvs_flash.h"
+#include    "esp_sleep.h"
+#include    "esp_pm.h"
+#include    "driver/gpio.h"
+
+
 
 #include    "sdcard.h"
 #include    "audio.h"
@@ -19,7 +24,9 @@
 #include    "weather_srv.h"
 #include    "esp_camera.h"
 #include    "ble_srv.h"
-#include "esp_hid_gap.h"
+#include    "esp_hid_gap.h"
+
+
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
@@ -52,17 +59,6 @@ void nvs_set_camera_frame_sequence(void);
 void nvs_weather_position_init(void);
 
 
-//输出任务信息
-static void print_task_list_vTaskList(void);
-
-//输出heap信息
-static void my_test_printf_hesp_info(void* arg, esp_event_base_t event_base,
-                                           int32_t event_id, void* event_data) ;
-
-void print_heap_caps_stats(void);
-
-
-
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
@@ -70,16 +66,13 @@ void print_heap_caps_stats(void);
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
-void lv_log_print(const char * buf)
-{
-    printf("%s\n",buf);
 
-
-}
 
 
 void app_main(void)
 {  
+    //init rtc_local_time_syned_flag to judge whether to send sntp request
+    rtc_local_time_syned_flag_init();
 
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
@@ -89,7 +82,6 @@ void app_main(void)
     
     nvs_user_data_init();
     
-    print_heap_caps_stats();
 
     //初始化 新版i2c驱动
     bsp_i2c_driver_init();    
@@ -101,17 +93,12 @@ void app_main(void)
 
     ESP_ERROR_CHECK(app_lvgl_init());
 
-    // lvgl_port_stop();
-
-
     lv_disp_set_rotation(lvgl_disp, LV_DISPLAY_ROTATION_90);
 
     ui_event_loop_init();
 
     sdcard_init_mount_fs();
     
-    app_lvgl_display();
-
     time_register_sntp_handler();
 
     weather_register_weathe_service_handler();
@@ -120,24 +107,14 @@ void app_main(void)
 
     ble_register_srv_handler();
 
+    app_lvgl_display();
+
     xTaskCreatePinnedToCore(wifi_task,"my_wifi_task",4096,NULL,1,NULL,1 );
 
     xTaskCreatePinnedToCore(my_ui_task,"my_ui_task",8192,NULL,4,NULL,1 );
     
 
     
-    // 订阅UI任务发布的事件
-    // ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_WIFI_SCAN_START, &my_test_printf_hesp_info, NULL));
-    // ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_GET_IP, &my_test_printf_hesp_info, NULL));
-   
-    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_WEATHER_REQUEST, &my_test_printf_hesp_info, NULL));
-
-
-    // print_heap_caps_stats();
-
-    // vTaskDelay(800);            //delay 10s
-    // print_task_list_vTaskList();
-    // vTaskDelay(NULL);
 
 }
 // *INDENT-OFF*
@@ -159,12 +136,10 @@ void nvs_user_data_init(void)
 
     nvs_weather_position_init();
 
-
-
-
 }
 
-
+/// @brief 
+/// @param  
 void nvs_set_camera_frame_sequence(void)
 {
 
@@ -196,7 +171,8 @@ void nvs_set_camera_frame_sequence(void)
 
 
 }
-
+/// @brief read weather position configuration in nvs
+/// @param  
 void nvs_weather_position_init(void)
 {
 
@@ -238,61 +214,3 @@ void nvs_weather_position_init(void)
 
 }
 
-
-
-
-static void print_task_list_vTaskList(void)
-{
-    // 根据实际任务数与名字长度调整 buffer 大小
-    static char *buf = NULL;
-    const size_t buf_size = 1024;
-
-    if (!buf) {
-        buf = heap_caps_malloc(buf_size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-        if (!buf) {
-            ESP_LOGE(TAG, "malloc fail for vTaskList buffer");
-            return;
-        }
-    }
-    // Format: "Name          State   Prio    Stack   Num\n"
-    vTaskList(buf);
-    ESP_LOGI(TAG, "===== vTaskList() =====\nName          State   Prio    Stack   Num\n%s", buf);
-    free(buf);
-    buf=NULL;
-}
-
-
-
-// 关闭wifi
-static void my_test_printf_hesp_info(void* arg, esp_event_base_t event_base,
-                                           int32_t event_id, void* event_data) 
-{
-
-    print_heap_caps_stats();
-    print_task_list_vTaskList();
-
-
-}
-
-void print_heap_caps_stats(void)
-{
-    multi_heap_info_t info;
-
-    // Default heap
-    heap_caps_get_info(&info, MALLOC_CAP_DEFAULT);
-    printf("\n Default Heap:\n");
-    printf("  Total size      : %u\n", (unsigned)heap_caps_get_total_size(MALLOC_CAP_DEFAULT));
-    printf("  Free size       : %u\n", (unsigned)info.total_free_bytes);
-
-    // Internal RAM heap
-    heap_caps_get_info(&info, MALLOC_CAP_INTERNAL);
-    printf("Internal RAM Heap:\n");
-    printf("  Total size      : %u\n", (unsigned)heap_caps_get_total_size(MALLOC_CAP_INTERNAL));
-    printf("  Free size       : %u\n", (unsigned)info.total_free_bytes);
-
-    // DMA-capable heap
-    heap_caps_get_info(&info, MALLOC_CAP_DMA);
-    printf("DMA-capable Heap:\n");
-    printf("  Total size      : %u\n", (unsigned)heap_caps_get_total_size(MALLOC_CAP_DMA));
-    printf("  Free size       : %u\n", (unsigned)info.total_free_bytes);
-}

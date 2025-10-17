@@ -3,6 +3,7 @@
 #include    "esp_log.h"
 #include    "driver/spi_master.h"
 #include    "driver/ledc.h"
+#include    "esp_sleep.h"
 
 #include    "io_extend.h"
 #include    "esp_err.h"
@@ -478,15 +479,14 @@ esp_err_t app_lvgl_init(void)
 
 
 
-
 void bsp_button_init(void)
 {
     gpio_config_t gpio_conf = {
-        .intr_type = GPIO_INTR_NEGEDGE,     // 下降沿中断
-        .mode = GPIO_MODE_INPUT,            // 输入模式
-        .pin_bit_mask = 1<<BSP_BUTTON_IO,   // 选择GPIO0
+        .intr_type = GPIO_INTR_POSEDGE,     // positive interrupt
+        .mode = GPIO_MODE_INPUT,            // input
+        .pin_bit_mask = 1<<BSP_BUTTON_IO,   // GPIO
         .pull_down_en = 0,                 
-        .pull_up_en = 1                     // 使能内部上拉
+        .pull_up_en = 1                     // enable internal pull up
     };
     // 根据上面的配置 设置GPIO
     gpio_config(&gpio_conf);
@@ -509,20 +509,36 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
         return ;
     }
     
-    BaseType_t xHigherPriorityTaskWoken;
+    //when g_Camera_event_queue is not empty, 
+    //it indicates a photo capture request is to be sent.
+    if(g_Camera_event_queue)
+    {
+        BaseType_t xHigherPriorityTaskWoken;
+        camera_command_t cmd;
+        cmd.type=CAMER_CMD_STORE;
+        cmd.data=NULL;
 
-    camera_command_t cmd;
-    cmd.type=CAMER_CMD_STORE;
-    cmd.data=NULL;
+        xQueueSendFromISR(g_Camera_event_queue, &cmd, &xHigherPriorityTaskWoken); // 把入口参数值发送到队列
     
+        if(xHigherPriorityTaskWoken)
+        {
+            // Actual macro used here is port specific.
+            portYIELD_FROM_ISR ();
+        }
 
-    xQueueSendFromISR(g_Camera_event_queue, &cmd, &xHigherPriorityTaskWoken); // 把入口参数值发送到队列
-    
-    // if( xHigherPriorityTaskWoken )
-    // {
-    //     // Actual macro used here is port specific.
-    //     portYIELD_FROM_ISR ();
-    // }
+    }
+    //now means enter deep sleep mode 
+    else
+    {
+        //configure gpio wake up ,when GPIO_NUM_O level=0 wake up whole system
+        esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0); 
+
+        //enter deep sleep mode
+        esp_deep_sleep_start();
+
+
+    }
+
     
 }
 

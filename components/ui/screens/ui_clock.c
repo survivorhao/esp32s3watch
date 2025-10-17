@@ -308,6 +308,11 @@ void ui_clock_screen_init(void)
     lv_obj_add_event_cb(ui_clock, ui_event_clock, LV_EVENT_ALL, NULL);
     uic_Screen2 = ui_clock;
 
+    if(rtc_local_time_syned_flag)
+    {
+        esp_event_post_to(ui_event_loop_handle,APP_EVENT, APP_SNTP_REQUEST, NULL,0, portMAX_DELAY);
+    }
+
 }
 
 void ui_clock_screen_destroy(void)

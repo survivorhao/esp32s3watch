@@ -99,6 +99,8 @@ typedef struct {
 static QueueHandle_t ui_message_queue;
 
 
+#define  SD_REFRESH_FILE_COUNT_MAX     30
+
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
@@ -470,6 +472,12 @@ void my_ui_task(void *par)
                                 //有内容，遍历显示
                                 else 
                                 {
+                                    //because limited ram ,so when the numbe of file too much
+                                    if(res_data->item_count >=SD_REFRESH_FILE_COUNT_MAX)
+                                    {
+                                        res_data->item_count=SD_REFRESH_FILE_COUNT_MAX;
+                                    }
+
                                     for (uint8_t  i = 0; i < res_data->item_count; i++) 
                                     {
                                         const char *icon = res_data->items[i].is_dir ? LV_SYMBOL_DIRECTORY : LV_SYMBOL_FILE;

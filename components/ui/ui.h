@@ -22,7 +22,7 @@ extern "C" {
 #include "nvs_flash.h"
 #include "esp_err.h"
 #include <stdint.h>
-
+#include "time_srv.h"
 
 ///////////////////// SCREENS ////////////////////
 

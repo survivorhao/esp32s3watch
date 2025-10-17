@@ -47,6 +47,6 @@ idf_component_register(SRCS ${SOURCES}
                        PRIV_REQUIRES    
                        
                        REQUIRES      lvgl   esp_lvgl_port  event nvs_flash weather_srv
-                        bsp_driver
+                        bsp_driver time_srv
                        )
 
