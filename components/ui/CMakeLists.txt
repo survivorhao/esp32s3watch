@@ -10,6 +10,7 @@ SET(SOURCES screens/ui_lockScreen.c
     screens/ui_calender.c
     screens/ui_setting.c
     screens/ui_bt.c
+    screens/ui_calculator.c
     ui_theme_manager.c
     ui_themes.c
     ui.c
@@ -47,6 +48,6 @@ idf_component_register(SRCS ${SOURCES}
                        PRIV_REQUIRES    
                        
                        REQUIRES      lvgl   esp_lvgl_port  event nvs_flash weather_srv
-                        bsp_driver time_srv
+                        bsp_driver time_srv sdcard
                        )
 

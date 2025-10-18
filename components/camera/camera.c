@@ -396,9 +396,9 @@ void save_frame_to_bmp(const char* out_image)
 
         // 检查并创建目录
         struct stat st;
-        if (stat("/sdcard/camera", &st) != 0) 
+        if (stat(CAMERA_SAVED_PIC_PATH, &st) != 0) 
         {
-            if (mkdir("/sdcard/camera", 0777) != 0) 
+            if (mkdir(CAMERA_SAVED_PIC_PATH, 0777) != 0) 
             {
                 ESP_LOGE(TAG, "Failed to create directory /sdcard/camera");
                 return;

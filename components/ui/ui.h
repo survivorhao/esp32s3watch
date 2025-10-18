@@ -23,6 +23,8 @@ extern "C" {
 #include "esp_err.h"
 #include <stdint.h>
 #include "time_srv.h"
+#include "sdcard.h"
+#include "esp_err.h"
 
 ///////////////////// SCREENS ////////////////////
 
@@ -38,6 +40,7 @@ extern "C" {
 #include "screens/ui_calender.h"
 #include "screens/ui_setting.h"
 #include "screens/ui_bt.h"
+#include "screens/ui_calculator.h"
 ///////////////////// VARIABLES ////////////////////
 
 

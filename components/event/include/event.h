@@ -60,6 +60,8 @@ enum{
     //camera deinit 
     APP_CAMERA_EXIT,
 
+    APP_CAMERA_PIC_DELETE,              //delete pic in sdcard which saved by camera
+
     APP_BLE_START,                      //start ble hid 
 
     APP_BLE_PAIR_PASSKEY_ENTRY,

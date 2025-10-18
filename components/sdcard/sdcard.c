@@ -2,9 +2,6 @@
 #include    <stdint.h>
 #include    <sys/unistd.h>
 #include    <sys/stat.h>
-#include    "esp_vfs_fat.h"
-#include    "sdmmc_cmd.h"
-#include    "driver/sdmmc_host.h"
 #include    "esp_log.h"
 #include    <string.h>
 #include    <errno.h>
@@ -20,7 +17,7 @@
 #include    "bsp_driver.h"
 #include    "event.h"
 #include    "ui.h"
-
+#include    "camera.h"
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
@@ -31,10 +28,12 @@
 
 static const char *TAG="my_sdcard";
 
-static bool sd_mount_success=0;
+bool sd_mount_success=0;
 
 
-// 假设 LCD 分辨率
+sdmmc_card_t *card;
+
+//
 #define LCD_H_RES 240
 #define LCD_V_RES 320
 
@@ -123,6 +122,10 @@ static esp_err_t read_bmp_and_display(const char *file_path) ;
 static uint16_t rgb888_to_565(uint8_t r, uint8_t g, uint8_t b);
 
 static void user_sd_refresh_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
+
+static void user_camera_pic_delete_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data);
+
+void delete_all_in_dir(const char *path);
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
@@ -231,8 +234,7 @@ void sdcard_init_mount_fs(void)
     // connected on the bus. This is for debug / example purpose only.
     slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
-    //存放sd卡信息
-    sdmmc_card_t *card;
+    
     ESP_LOGI(TAG, "Mounting filesystem");
     ret = esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card);
 
@@ -256,9 +258,13 @@ void sdcard_init_mount_fs(void)
     ESP_LOGI(TAG, "Filesystem mounted");
 
     // Card has been initialized, print its properties
-    sdmmc_card_print_info(stdout, card);
+    // sdmmc_card_print_info(stdout, card);
 
-    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_FILE_REFRESH_REQUEST, user_sd_refresh_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, 
+                                APP_FILE_REFRESH_REQUEST, user_sd_refresh_handler, NULL));
+
+    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, 
+                                APP_CAMERA_PIC_DELETE, user_camera_pic_delete_handler, NULL));
 
 }
 
@@ -552,7 +558,7 @@ static void user_sd_refresh_handler(void *arg, esp_event_base_t event_base, int3
     //点击的是目录，列出指定目录下的内容
     if(data->is_directory)
     {
-        //refresh data->name !=0 表明这是点击子目录发送的刷新请求
+        //refresh data->name !=0 indicate this refresh request is sent by click directory
         if(strlen(data->name)!=0)
         {
             strcat(data->current_path, data->name);
@@ -560,15 +566,15 @@ static void user_sd_refresh_handler(void *arg, esp_event_base_t event_base, int3
         }
         ESP_LOGI(TAG,"refresh target full path is %s ",data->current_path);
 
-        //更改current path
+        //change current path
         strcpy(result.current_path, data->current_path);
 
-        // 读取目录
+        // read file in this directory
         DIR *dir = opendir(data->current_path);
         if (dir) 
         {
             struct dirent *entry;
-            uint8_t capacity = 10;  // 初始容量
+            uint8_t capacity = 10;  // initial capacity
 
             result.items = heap_caps_malloc(capacity * sizeof(file_item_t), MALLOC_CAP_SPIRAM |MALLOC_CAP_8BIT);
             result.item_count = 0;
@@ -594,11 +600,11 @@ static void user_sd_refresh_handler(void *arg, esp_event_base_t event_base, int3
                 
                 struct stat st;
 
-                //判断是否是目录
+                //judge whether is directoory
                 result.items[result.item_count].is_dir = (stat(full_path, &st) == 0 && S_ISDIR(st.st_mode));
                 result.item_count++;
 
-                //释放
+                //free resources
                 free(full_path);
             }
             closedir(dir);
@@ -650,4 +656,50 @@ static void user_sd_refresh_handler(void *arg, esp_event_base_t event_base, int3
 
     }
 
+}
+
+
+static void user_camera_pic_delete_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
+{
+    //sdcard haven't mount
+    if(!sd_mount_success)
+    {
+        return ;
+    }
+
+    //remove all files in CAMERA_SAVED_PIC_PATH
+    delete_all_in_dir(CAMERA_SAVED_PIC_PATH);    
+
+}
+
+void delete_all_in_dir(const char *path)
+{
+    DIR *dir = opendir(path);
+    if (!dir) {
+        printf("Failed to open directory: %s\n", path);
+        return;
+    }
+    struct dirent *entry;
+    char fullpath[512];
+    while ((entry = readdir(dir)) != NULL) {
+        // 跳过 "." 和 ".."
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        snprintf(fullpath, sizeof(fullpath), "%s/%s", path, entry->d_name);
+
+        struct stat st;
+        if (stat(fullpath, &st) == 0) {
+            if (S_ISDIR(st.st_mode)) 
+            {
+                // 递归删除子目录
+                delete_all_in_dir(fullpath);
+                rmdir(fullpath);
+            } else {
+                // 删除文件
+                remove(fullpath);
+            }
+        }
+    }
+    closedir(dir);
 }

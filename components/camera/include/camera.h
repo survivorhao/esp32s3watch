@@ -26,6 +26,9 @@
 
 extern int  camera_frame_save_file_counter;
 
+//picture's saved path 
+#define  CAMERA_SAVED_PIC_PATH      "/sdcard/camera"
+
 typedef enum {
 
     //保存当前帧

@@ -31,12 +31,20 @@ lv_obj_t *ram_use_exit_but=NULL;
 lv_obj_t *psram_label=NULL;
 lv_obj_t *inter_ram_label=NULL;
 
+lv_obj_t *sd_status_screen=NULL;
+lv_obj_t *sd_status_exit_but=NULL;
+lv_obj_t *sd_status_label=NULL;
+
+
+lv_obj_t *camera_pic_screen=NULL;
+lv_obj_t *camera_pic_exit_but=NULL;
+lv_obj_t *camera_pic_button=NULL;
 
 
 static const char *TAG="ui_setting ";
 
 //total setting options number is 
-#define TOTAL_SETTING_OPTIONS    4
+#define TOTAL_SETTING_OPTIONS    6
 
 
 
@@ -46,6 +54,8 @@ static const char *TAG="ui_setting ";
 void weather_pos_handler(void *arg);
 void lightness_adjust_handler(void *arg);
 void ram_use_info_handler(void *arg);
+void sd_mount_status_handler(void *arg);
+void camera_saved_pic_handler(void *arg);
 
 //---------------------------------------end---------------------------------------------------
 //---------------------------------------------------------------------------------------------
@@ -63,11 +73,11 @@ void get_ram_use(void);
 static char   Setting_option_array[10][64]={
                     "screen ligntness ", 
                     "weather position ",
-                    "author: survivorhao ",
                     "ram use info",
-                    "",
+                    "sdcard mount status",
+                    "camera saved pic",
 
-                    "",
+                    "author: survivorhao",
                     "",
                     "",
                     "",
@@ -78,9 +88,9 @@ static char   Setting_option_array[10][64]={
 static const void (*Setting_option_handler[10])(void *)={
                     lightness_adjust_handler,
                     weather_pos_handler,
-                    NULL,
                     ram_use_info_handler,
-                    NULL,
+                    sd_mount_status_handler,
+                    camera_saved_pic_handler,
 
                     NULL,
                     NULL,
@@ -194,7 +204,7 @@ static void setting_button_click_cb(lv_event_t *e)
         }
 
         //when handler is not null 
-        if(Setting_option_handler[option_index] )
+        if(Setting_option_handler[option_index])
         {
             //find setting option associate index then call relevant handler
             Setting_option_handler[option_index](NULL);
@@ -263,6 +273,63 @@ void ui_ram_use_return_event_cb(lv_event_t * e)
 }
 
 
+/// @brief click this button to return to previous screen 
+/// @param e 
+void ui_sd_status_return_event_cb(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) 
+    {
+
+        _ui_screen_change(&ui_setting, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_setting_screen_init);     
+        
+        if(sd_status_screen)
+        {
+            lv_obj_del_delayed(sd_status_screen,200);
+            sd_status_screen=NULL;
+
+
+
+        }
+    }
+}
+
+
+/// @brief click this button to return to previous screen 
+/// @param e 
+void ui_camera_pic_return_event_cb(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) 
+    {
+
+        _ui_screen_change(&ui_setting, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_setting_screen_init);     
+        
+        if(camera_pic_screen)
+        {
+            lv_obj_del_delayed(camera_pic_screen,200);
+            camera_pic_screen=NULL;
+
+
+
+        }
+    }
+}
+
+void ui_camera_pic_delete_cb(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) 
+    {
+        ESP_ERROR_CHECK(esp_event_post_to(ui_event_loop_handle, APP_EVENT, 
+            APP_CAMERA_PIC_DELETE, NULL, 0, portMAX_DELAY));
+        
+    }
+
+}
 /// @brief 
 /// @param  
 void ui_setting_screen_init(void )
@@ -323,13 +390,6 @@ void ui_setting_screen_init(void )
   
     //add return button call back function
     lv_obj_add_event_cb(setting_exit_but , ui_setting_return_event_cb, LV_EVENT_CLICKED, NULL);    
-
-
-
-
-
-
-
 
 }
 
@@ -458,6 +518,111 @@ void ui_ram_use_screen_init(void)
 
 }
 
+void ui_sd_status_screen_init(void) 
+{
+    sd_status_screen = lv_obj_create(NULL);  
+    lv_obj_set_style_bg_color(sd_status_screen, lv_color_hex(0xffffff), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(sd_status_screen, 255, LV_PART_MAIN);
+    lv_obj_clear_flag(sd_status_screen, LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+    LV_OBJ_FLAG_SCROLL_CHAIN|LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+
+    //create exit button (which be pressed will change current display to before one )
+    sd_status_exit_but = lv_img_create(sd_status_screen);
+    lv_img_set_src(sd_status_exit_but , &ui_img_return_png);
+    lv_obj_set_width(sd_status_exit_but , LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(sd_status_exit_but , LV_SIZE_CONTENT);    /// 1
+    lv_obj_align(sd_status_exit_but , LV_ALIGN_TOP_MID, -90, -80);
+    lv_obj_add_flag(sd_status_exit_but , LV_OBJ_FLAG_CLICKABLE);     /// Flags
+    lv_obj_clear_flag(sd_status_exit_but , LV_OBJ_FLAG_PRESS_LOCK | LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_GESTURE_BUBBLE |
+                        LV_OBJ_FLAG_SNAPPABLE  | LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+                        LV_OBJ_FLAG_SCROLL_CHAIN);     /// Flags
+    lv_img_set_zoom(sd_status_exit_but , 50);
+    lv_obj_set_style_bg_color(sd_status_exit_but , lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(sd_status_exit_but , 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_set_style_img_recolor(sd_status_exit_but , lv_color_hex(0x000000), LV_PART_MAIN );
+    lv_obj_set_style_img_recolor_opa(sd_status_exit_but , 0, LV_PART_MAIN);
+    lv_obj_add_event_cb(sd_status_exit_but , ui_sd_status_return_event_cb, LV_EVENT_CLICKED, NULL); 
+
+
+    sd_status_label=lv_label_create(sd_status_screen);
+    lv_obj_set_style_text_align(sd_status_label, LV_TEXT_ALIGN_LEFT, 0);
+    lv_obj_set_size(sd_status_label, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_align(sd_status_label, LV_ALIGN_TOP_MID, 0, 60);
+    
+
+    if(sd_mount_success)
+    {
+        char type[16];
+
+        if (card->is_sdio) 
+        {
+            strcpy(type,"SDIO");
+
+        } else if (card->is_mmc) 
+        {
+            strcpy(type,"MMC");
+        } else 
+        {
+            strcpy(type,"UNKONWN");
+        }
+        const char *freq_unit = card->real_freq_khz < 1000 ? "kHz" : "MHz";
+        const uint16_t freq = card->real_freq_khz < 1000 ? card->real_freq_khz : card->real_freq_khz / 1000;
+        const char *max_freq_unit = card->max_freq_khz < 1000 ? "kHz" : "MHz";
+        const uint16_t max_freq = card->max_freq_khz < 1000 ? card->max_freq_khz : card->max_freq_khz / 1000;
+        lv_label_set_text_fmt(sd_status_label, "sdcard type is %s\n Speed: %d %s (limit: %d %s)\n", type, freq, freq_unit, max_freq, max_freq_unit);
+
+
+    }
+    else
+    {
+        lv_label_set_text(sd_status_label,"sdcard mount fail\n please check relevant configurations");
+    
+    }
+    
+
+}
+
+void ui_camera_pic_screen_init(void) 
+{
+    camera_pic_screen = lv_obj_create(NULL);  
+    lv_obj_set_style_bg_color(camera_pic_screen, lv_color_hex(0xffffff), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(camera_pic_screen, 255, LV_PART_MAIN);
+    lv_obj_clear_flag(camera_pic_screen, LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+    LV_OBJ_FLAG_SCROLL_CHAIN|LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+
+    //create exit button (which be pressed will change current display to before one )
+    camera_pic_exit_but = lv_img_create(camera_pic_screen);
+    lv_img_set_src(camera_pic_exit_but , &ui_img_return_png);
+    lv_obj_set_width(camera_pic_exit_but , LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(camera_pic_exit_but , LV_SIZE_CONTENT);    /// 1
+    lv_obj_align(camera_pic_exit_but , LV_ALIGN_TOP_MID, -90, -80);
+    lv_obj_add_flag(camera_pic_exit_but , LV_OBJ_FLAG_CLICKABLE);     /// Flags
+    lv_obj_clear_flag(camera_pic_exit_but , LV_OBJ_FLAG_PRESS_LOCK | LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_GESTURE_BUBBLE |
+                        LV_OBJ_FLAG_SNAPPABLE  | LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+                        LV_OBJ_FLAG_SCROLL_CHAIN);     /// Flags
+    lv_img_set_zoom(camera_pic_exit_but , 50);
+    lv_obj_set_style_bg_color(camera_pic_exit_but , lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(camera_pic_exit_but , 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_set_style_img_recolor(camera_pic_exit_but , lv_color_hex(0x000000), LV_PART_MAIN );
+    lv_obj_set_style_img_recolor_opa(camera_pic_exit_but , 0, LV_PART_MAIN);
+    lv_obj_add_event_cb(camera_pic_exit_but , ui_camera_pic_return_event_cb, LV_EVENT_CLICKED, NULL); 
+
+    lv_obj_t *warning_label=lv_label_create(camera_pic_screen);
+    lv_obj_set_size(warning_label, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_label_set_text(warning_label,"press this button will delete\n all pictures which saved\n by camera");
+    lv_obj_align(warning_label, LV_ALIGN_TOP_MID,0,50);
+            
+    camera_pic_button=lv_btn_create(camera_pic_screen);
+    lv_obj_align(camera_pic_button, LV_ALIGN_TOP_MID,0,120);
+    lv_obj_add_event_cb(camera_pic_button, ui_camera_pic_delete_cb, LV_EVENT_CLICKED,NULL);
+    lv_obj_set_size(camera_pic_button,60,30);
+
+
+
+
+}
 
 void weather_pos_handler(void *arg)
 {
@@ -476,6 +641,16 @@ void ram_use_info_handler(void *arg)
 {
 
     _ui_screen_change(&ram_use_screen, LV_SCR_LOAD_ANIM_NONE, 300, 0, ui_ram_use_screen_init);
+}
+
+void sd_mount_status_handler(void *arg)
+{
+    _ui_screen_change(&sd_status_screen, LV_SCR_LOAD_ANIM_NONE, 300, 0, ui_sd_status_screen_init);
+}
+
+void camera_saved_pic_handler(void *arg)
+{
+    _ui_screen_change(&camera_pic_screen, LV_SCR_LOAD_ANIM_NONE, 300, 0, ui_camera_pic_screen_init);
 }
 
 
