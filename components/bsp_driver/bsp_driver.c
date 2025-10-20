@@ -51,53 +51,11 @@ static void IRAM_ATTR gpio_isr_handler(void* arg);
 
 
 
-
-
-
-
-
-
-
-
-#if     I2C_DRIVER_VERSION==0
-//----------------------------------------------------------------------------------------------------------
-//-----------------------------------------i2c  旧 版 本 -----------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-
-
-/*
-    @desc:  初始化i2c0驱动（只能适应旧版本，基于新版本的驱动的应用层开发不可调用）
-
-*/
-void    bsp_i2c_driver_init_legacy(void)
-{
-    ESP_LOGI(TAG, "Init I2C bus ");
-    i2c_config_t i2c_conf = 
-    {
-        .sda_io_num = EXAMPLE_I2C_SDA_IO,
-        .scl_io_num = EXAMPLE_I2C_SCL_IO,
-        .mode = I2C_MODE_MASTER,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = EXAMPLE_I2C_BUS_FRE,            //总线频率 100k
-    };
-    ESP_ERROR_CHECK(i2c_param_config(EXAMPLE_I2C_NUM, &i2c_conf));
-    ESP_ERROR_CHECK(i2c_driver_install(EXAMPLE_I2C_NUM, i2c_conf.mode, 0, 0, 0));
-
-
-
-}
-
-
-
-
-#else
 //----------------------------------------------------------------------------------------------------------
 //----------------------------------------- i2c 新 版 本 -----------------------------------------------------
 //----------------------------------------------------------------------------------------------------------
 
 i2c_master_bus_handle_t     I2C_Master_bus_handle;
-i2c_master_dev_handle_t     I2C_Master_oled_dev_handle;
 i2c_master_dev_handle_t     I2C_Master_io_extend_dev_handle;
 
 /*
@@ -121,22 +79,14 @@ void   bsp_i2c_driver_init(void)
 
     i2c_device_config_t dev_config = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = (0x78>>1),                 //oled设备七位地址
+        .device_address = (0x32>>1),           //io extender 7 bit address
         .scl_speed_hz = EXAMPLE_I2C_BUS_FRE,
     };
     
-    // 未使用，注释即可
-    //添加Oled设备
-    // ESP_ERROR_CHECK(i2c_master_bus_add_device(I2C_Master_bus_handle, &dev_config, &I2C_Master_oled_dev_handle));
-
-
-     //添加io extend 设备
-    dev_config.device_address=(0x32>>1);             //io  extend 芯片七位地址
     ESP_ERROR_CHECK(i2c_master_bus_add_device(I2C_Master_bus_handle, &dev_config, &I2C_Master_io_extend_dev_handle));
 
 }
 
-#endif
 
 
 

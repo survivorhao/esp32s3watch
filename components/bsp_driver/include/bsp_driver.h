@@ -13,26 +13,19 @@
 #include    "lvgl.h"
 #include    "esp_lvgl_port.h"
 #include    "esp_lcd_touch.h"
+#include    "driver/i2c_master.h"
+
+
 
 extern  esp_lcd_panel_handle_t      lcd_panel_handle ;    //tft lcd panel句柄
 extern  esp_lcd_panel_io_handle_t   lcd_io_handle ;       //tft lcd spi 句柄
-extern  esp_lcd_touch_handle_t      tp_handle;                  // 触摸屏句柄
+extern  esp_lcd_touch_handle_t      tp_handle;            // 触摸屏句柄
 
 
 
-#define     I2C_DRIVER_VERSION   1               //1，使用新版本i2c 驱动， 0使用旧版本驱动
+extern i2c_master_bus_handle_t     I2C_Master_bus_handle;
+extern i2c_master_dev_handle_t     I2C_Master_io_extend_dev_handle;
 
-#if         I2C_DRIVER_VERSION==0
-
-    #include    "driver/i2c.h"
-
-#else
-
-    #include    "driver/i2c_master.h"
-    extern i2c_master_bus_handle_t     I2C_Master_bus_handle;
-    extern i2c_master_dev_handle_t     I2C_Master_oled_dev_handle;
-    extern i2c_master_dev_handle_t     I2C_Master_io_extend_dev_handle;
-#endif
 
 
 
@@ -43,22 +36,8 @@ extern  esp_lcd_touch_handle_t      tp_handle;                  // 触摸屏句�
 #define     EXAMPLE_I2C_BUS_FRE        100000
 
 
-
-#if         I2C_DRIVER_VERSION==0               //legacy i2c driver 
-//----------------------------------------------------------------------------------------------------------
-//-----------------------------------------i2c  旧 版 本 -----------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-
-void    bsp_i2c_driver_init_legacy(void);
-
-#else
-//----------------------------------------------------------------------------------------------------------
-//-----------------------------------------i2c  新 版 本 -----------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-
 void    bsp_i2c_driver_init(void);    
 
-#endif
 
 
 

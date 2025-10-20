@@ -7,7 +7,6 @@
 #include    "sdkconfig.h"
 #include    "esp_check.h"
 #include    "driver/i2s_tdm.h"
-#include    "driver/i2c.h"
 #include    "es7210.h"
 #include    "format_wav.h"
 #include    "audio.h"
@@ -35,7 +34,7 @@
 #define EXAMPLE_SD_MOUNT_POINT     "/sdcard"
 #define EXAMPLE_RECORD_FILE_PATH   "/RECORD.WAV"
 
-static const char *TAG = "example";
+static const char *TAG = "audio_input";
 
 static i2s_chan_handle_t es7210_i2s_init(void)
 {

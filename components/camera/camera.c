@@ -22,6 +22,15 @@
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
+/**
+ * @file camera.c
+ * @brief Camera capture, rotation and display helpers.
+ *
+ * This module configures the camera peripheral, provides a double-buffered
+ * pipeline to rotate frames (using esp_imgfx_rotate) and push them to the
+ * LVGL display, and supports saving frames to BMP on the SD card.
+ */
+
 //definition
 
 //----------------------------------------------------------------------------------------------------------------------------
@@ -30,36 +39,38 @@
 static const char * TAG="app_camera ";
 
 
-// 全局变量
-static uint8_t *frame_out_buf[2] = {NULL, NULL};  // 双缓冲
+// use double buffer
+static uint8_t *frame_out_buf[2] = {NULL, NULL};  
 
 
 //输入旋转像素数据
 static esp_imgfx_data_t in_image;
 
-static SemaphoreHandle_t frame_buf_sem[2];  // 每个缓冲一个信号量
+//every frame buffer have a semaphore
+static SemaphoreHandle_t frame_buf_sem[2];  
 
-static QueueHandle_t    xQueueLCDFrame=NULL;  // 队列传 buf_info_t
+//queue
+static QueueHandle_t    xQueueLCDFrame=NULL;  
 
 QueueHandle_t    g_Camera_event_queue=NULL;  
 
-//将camera frame 刷新到lcd任务
+//refresh camera frame to display
 TaskHandle_t process_lcd_handle=NULL;
 
-//读取camera frame任务
+//get  camera frame task
 TaskHandle_t process_camera_handle=NULL;
 
 uint8_t first_save_camera_frame_flag=1;
 
-// 生成文件名（使用计数器递增）
+//saved file name counter 
 int  camera_frame_save_file_counter;
 
 
-// 定义缓冲结构体（用于队列传递）
+//
 typedef struct 
 {
-    uint8_t *data;  // 缓冲指针
-    uint8_t  buf_index;  // 0 或 1
+    uint8_t *data;        // point to frame buffer
+    uint8_t  buf_index;   // 0/1 indicate double buffer use
 }frame_buf_info_t;
 
 
@@ -92,14 +103,14 @@ static void user_camera_deinit_handler(void* arg, esp_event_base_t event_base, i
 
 
 
-// 摄像头硬件初始化
+//init camera
 esp_err_t  bsp_camera_init(void)
 {
-    camera_dvp_pwdn_set(0); // 打开摄像头
+    camera_dvp_pwdn_set(0); // Power on camera module
 
     camera_config_t config;
-    config.ledc_channel = LEDC_CHANNEL_1;  // LEDC通道选择  用于生成XCLK时钟 但是S3不用
-    config.ledc_timer = LEDC_TIMER_1; // LEDC timer选择  用于生成XCLK时钟 但是S3不用
+    config.ledc_channel = LEDC_CHANNEL_1; // LEDC channel selection (used to generate XCLK on some chips); not required on ESP32-S3
+    config.ledc_timer = LEDC_TIMER_1;     // LEDC timer selection (used to generate XCLK on some chips); not required on ESP32-S3
     config.pin_d0 = CAMERA_PIN_D0;
     config.pin_d1 = CAMERA_PIN_D1;
     config.pin_d2 = CAMERA_PIN_D2;
@@ -112,9 +123,9 @@ esp_err_t  bsp_camera_init(void)
     config.pin_pclk = CAMERA_PIN_PCLK;              //pixel  clock 
     config.pin_vsync = CAMERA_PIN_VSYNC;
     config.pin_href = CAMERA_PIN_HREF;
-    config.pin_sccb_sda = -1;                       // 这里写-1 表示使用已经初始化的I2C接口
+    config.pin_sccb_sda = -1;   // Use -1 to indicate the already-initialized I2C interface is used
     config.pin_sccb_scl = -1;
-    config.sccb_i2c_port = 0;                      //修改了内部源码，确保deinit时不删除camera 的i2c device
+    config.sccb_i2c_port = EXAMPLE_I2C_NUM;       //
     config.pin_pwdn = CAMERA_PIN_PWDN;
     config.pin_reset = CAMERA_PIN_RESET;
     config.xclk_freq_hz = XCLK_FREQ_HZ;
@@ -126,19 +137,19 @@ esp_err_t  bsp_camera_init(void)
     config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
 
     // camera init
-    esp_err_t err = esp_camera_init(&config); // 配置上面定义的参数
+    esp_err_t err = esp_camera_init(&config); // Configure camera with the settings above
     if (err != ESP_OK)
     {
         ESP_LOGE(TAG, "Camera init failed with error 0x%x", err);
         return err;
     }
 
-    sensor_t *s = esp_camera_sensor_get(); // 获取摄像头型号
+    sensor_t *s = esp_camera_sensor_get(); // Get camera sensor information
 
     if (s->id.PID == GC0308_PID) 
     {
         
-        s->set_hmirror(s, 1);  // 这里控制摄像头镜像 写1镜像 写0不镜像
+        s->set_hmirror(s, 1);  // Set horizontal mirror: 1 = mirror, 0 = no mirror
     }
 
     return err;
@@ -146,6 +157,13 @@ esp_err_t  bsp_camera_init(void)
 }
 
 
+/**
+ * @brief Deinitialize the camera subsystem and free related resources.
+ *
+ * This function powers down the camera, stops and deletes camera and LCD
+ * processing tasks, frees frame buffers and semaphores, deletes queues and
+ * stores the last saved frame sequence number into NVS.
+ */
 void bsp_camera_deinit(void)
 {
     camera_dvp_pwdn_set(1); // 关闭power线，关闭摄像头
@@ -196,14 +214,33 @@ void bsp_camera_deinit(void)
 
 
 
+
+
+
 }
 
-
+/**
+ * @brief Set camera power-down GPIO level via IO extender.
+ *
+ * @param level 0 to power on the camera, non-zero to power it down.
+ */
 void camera_dvp_pwdn_set(uint8_t level)
 {
     io_extend_set_level( 2, level);
 
 }
+
+/**
+ * @brief LCD processing task.
+ *
+ * This task receives rotated frame buffers from the camera task via
+ * `xQueueLCDFrame`, sets them as the LVGL image source and handles
+ * save commands coming from `g_Camera_event_queue`. After display or
+ * save operations it releases the corresponding buffer semaphore so the
+ * camera task can reuse the buffer.
+ *
+ * @param arg Unused task parameter.
+ */
 static void task_process_lcd(void *arg) 
 {
 
@@ -272,9 +309,27 @@ static void task_process_lcd(void *arg)
 }
 
 
+/**
+ * @brief Camera capture and rotate task.
+ *
+ * This task takes raw frames from `esp_camera_fb_get()`, copies them into
+ * the rotation input buffer, performs a 90-degree rotation using the
+ * esp_imgfx_rotate API into a double-buffered output, and sends the
+ * rotated frame descriptor to the LCD queue (`xQueueLCDFrame`).
+ * 
+ * @note:
+ * Since the screen is in portrait mode with a display size of 240 (width) * 320 (height), 
+ * while the original camera frame obtained is in landscape mode 
+ * with a size of 320 (width) * 240 (height).
+ * 
+ * The task uses semaphores (`frame_buf_sem`) to coordinate buffer usage
+ * with the LCD task.
+ *
+ * @param arg Unused task parameter.
+ */
 static void task_process_camera(void *arg) 
 {
-    // 配置旋转参数（保持原样）
+    //configure swap arguments
     esp_imgfx_rotate_cfg_t cfg = {
         .in_pixel_fmt = ESP_IMGFX_PIXEL_FMT_RGB565_LE,
         .in_res = {.width = 320, .height = 240},
@@ -285,7 +340,7 @@ static void task_process_camera(void *arg)
     esp_imgfx_err_t ret = esp_imgfx_rotate_open(&cfg, &handle);
     assert(ESP_IMGFX_ERR_OK == ret);
 
-    uint8_t  current_buf_index = 0;  // 起始索引
+    uint8_t  current_buf_index = 0;  //start index
     ESP_LOGI(TAG,"camera task create success");
 
     while (true) 
@@ -297,26 +352,26 @@ static void task_process_camera(void *arg)
             continue;
         }
 
-        // memcpy 到输入
+        //
         memcpy(in_image.data, frame->buf, 320 * 240 * 2);
-        esp_camera_fb_return(frame);  // 早释放原帧
+        esp_camera_fb_return(frame);  //Release this frame early
 
         // ESP_LOGI(TAG,"take fram_buf_sem ing ");
-        // 等待一个可用缓冲（take 信号量）
+        // wait a available semaphore which indicate a free frame buffer
         if (xSemaphoreTake(frame_buf_sem[current_buf_index], portMAX_DELAY) == pdTRUE) 
         {
             // ESP_LOGI(TAG,"take fram_buf_sem success ");
             esp_imgfx_data_t out_image = {.data_len = 240 * 320 * 2, .data = frame_out_buf[current_buf_index]};
 
-            // 旋转
+            // swap 90 
             ret = esp_imgfx_rotate_process(handle, &in_image, &out_image);
             assert(ESP_IMGFX_ERR_OK == ret);
 
-            // 发送结构体到队列
+            // send to queue
             frame_buf_info_t buf_info = {.data = out_image.data, .buf_index = current_buf_index};
             xQueueSend(xQueueLCDFrame, &buf_info, portMAX_DELAY);
 
-            // 切换下一个缓冲索引
+            //switch to next index 
             current_buf_index = (current_buf_index + 1) % 2;
         }
     }
@@ -324,21 +379,35 @@ static void task_process_camera(void *arg)
     vTaskDelete(NULL);
 }
 
-// 让摄像头显示到LCD
+
+/**
+ * @brief Start camera capture and LCD display tasks.
+ *
+ * This function initializes the double buffers and creates two FreeRTOS
+ * tasks: one for capturing and rotating frames, and one for displaying
+ * frames on the LVGL LCD.
+ */
 void app_camera_lcd(void)
 {
+    //init double buffer
     app_camera_double_buff_init();
-    
 
     xTaskCreatePinnedToCore(task_process_camera, "task_process_camera", 3 * 1024, NULL, 5, &process_camera_handle, 1);
     xTaskCreatePinnedToCore(task_process_lcd, "task_process_lcd", 4 * 1024, NULL, 5, &process_lcd_handle, 0);
 
     ESP_LOGI(TAG,"create camera and lcd task success ");
 
+
 }
 
 
-// 在 app_main 或初始化函数中
+/**
+ * @brief Allocate double buffers, semaphores and queues used by camera pipeline.
+ *
+ * Allocates two output buffers in PSRAM, an input buffer for rotation,
+ * creates binary semaphores for buffer handoff, and creates queues for
+ * passing frames and camera commands.
+ */
 void app_camera_double_buff_init(void) 
 {
     // 预分配双缓冲
@@ -382,12 +451,17 @@ void app_camera_double_buff_init(void)
 
 
 
-
-// 新增: 保存函数（将旋转后的 RGB565 转换为 RGB888 并保存到 BMP 文件）
-// void save_frame_to_bmp(const esp_imgfx_data_t* out_image) 
+/**
+ * @brief Save a rotated RGB565 frame buffer to a 24-bit BMP file on SD card.
+ *
+ * The function converts the provided RGB565 buffer to RGB888 (BGR order
+ * for BMP), writes a BITMAPINFOHEADER and pixel data, and increments a
+ * saved-file counter stored in `camera_frame_save_file_counter`.
+ *
+ * @param out_image Pointer to the RGB565 frame buffer to save.
+ */
 void save_frame_to_bmp(const char* out_image)
 {
-
 
     //第一次发送保存帧请求
     if(first_save_camera_frame_flag==1)
@@ -507,7 +581,12 @@ void save_frame_to_bmp(const char* out_image)
 
 
 
-
+/**
+ * @brief Register camera-related event handlers on the UI event loop.
+ *
+ * Registers handlers for application-level camera enter/exit events so
+ * the camera can be initialized or deinitialized in response to UI actions.
+ */
 void camera_register_camera_handler(void)
 {
     //init camera handler
@@ -516,11 +595,15 @@ void camera_register_camera_handler(void)
     //deinit camera handler
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_CAMERA_EXIT, user_camera_deinit_handler, NULL));
 
-
-
 }
 
 
+/**
+ * @brief Handle APP_CAMERA_ENTER event: initialize camera and start display.
+ *
+ * Waits for any pending I2C transactions to finish, then initializes the
+ * camera hardware and starts the camera/LCD tasks with `app_camera_lcd()`.
+ */
 static void user_camera_init_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
 
@@ -551,12 +634,17 @@ static void user_camera_init_handler(void* arg, esp_event_base_t event_base, int
 }
 
 
+/**
+ * @brief Handle APP_CAMERA_EXIT event: deinitialize camera and free resources.
+ *
+ * This handler stops the camera and releases all resources by calling
+ * `bsp_camera_deinit()`.
+ */
 static void user_camera_deinit_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data)
 {
     ESP_LOGI(TAG,"receive camera_exit event");
     
     bsp_camera_deinit();
-
 
 
 }

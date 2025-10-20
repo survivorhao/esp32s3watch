@@ -33,7 +33,12 @@ void ui_event_Button10(lv_event_t * e)
     {
         ESP_LOGI(TAG,"change screen to ui_camera");
         
-        _ui_screen_change(&ui_camera, LV_SCR_LOAD_ANIM_NONE, 150, 0, ui_camera_screen_init);
+        //camera couldn't work with wifi/ble because of limited internal ram
+        if(ui_wifi_working ||ui_ble_working)
+        {
+            return ;
+        }
+        _ui_screen_change(&ui_camera, LV_SCR_LOAD_ANIM_NONE, 300, 0, ui_camera_screen_init);
 
     }
 }

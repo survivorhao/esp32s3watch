@@ -58,3 +58,4 @@ dkms.conf
 build/
 managed_components/
 .vscode/
+cpbin.sh

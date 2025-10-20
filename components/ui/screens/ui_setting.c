@@ -576,7 +576,7 @@ void ui_sd_status_screen_init(void)
     }
     else
     {
-        lv_label_set_text(sd_status_label,"sdcard mount fail\n please check relevant configurations");
+        lv_label_set_text(sd_status_label,"sdcard mount fail\n please check \nrelevant configurations");
     
     }
     

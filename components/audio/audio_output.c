@@ -18,7 +18,7 @@
 #include    "bsp_driver.h"
 
 
-static const char *TAG = "i2s_es8311";
+static const char *TAG = "audio_output";
 static const char err_reason[][30] = {"input param is invalid",
                                       "operation timeout"
                                      };

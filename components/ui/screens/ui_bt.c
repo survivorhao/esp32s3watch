@@ -100,11 +100,7 @@ void ui_bt_return_event_cb(lv_event_t * e)
     {
 
         _ui_screen_change(&ui_app1, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_app1_screen_init);     
-        if(ui_bt!=NULL)
-        {
 
-
-        }
     }
 }
 

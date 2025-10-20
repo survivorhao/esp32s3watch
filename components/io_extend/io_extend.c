@@ -37,7 +37,6 @@ void  io_extend_set_level(uint8_t io,uint8_t level);
 //------------------------I2C_DRIVER_VERSION==1 使用新版本i2c驱动--------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------------------//
 //-----------------------------------------------------------------------------------------------------------------//
-#if  I2C_DRIVER_VERSION==1
 
 
 esp_err_t   io_extend_read_reg(uint8_t  reg,uint8_t *read_buf, uint8_t read_length)
@@ -85,67 +84,6 @@ esp_err_t   io_extend_write_reg(uint8_t  reg,uint8_t data)
 } 
 
 
-
-
-
-
-#else
-
-//------------------------I2C_DRIVER_VERSION==0 使用旧版本i2c驱动--------------------------------------------------//
-//--------------------------------------------------------------------------------------------------------------------//
-//-----------------------------------------------------------------------------------------------------------------//
-
-/*
-
-
-*/
-esp_err_t   io_extend_read_reg(uint8_t  reg,uint8_t *read_buf, uint8_t read_length)
-{
-    esp_err_t ret;
-
-    uint8_t   write_buf;
-    write_buf=reg;
-
-
-    ret=i2c_master_write_read_device(IO_EXTEND_I2C,IO_EXTEND_ADD,&write_buf,1,read_buf,read_length,portMAX_DELAY);
-    if(ret!=ESP_OK)
-    {
-        ESP_LOGE(TAG,"---------io_extend_read_reg  fail ");
-
-    }
-
-    return ret;
-
-} 
-
-
-/*
-    @reg:   io_extend chip  specific  register
-
-    @data:  data to write 
-
-
-*/
-esp_err_t   io_extend_write_reg(uint8_t  reg,uint8_t data)
-{
-    esp_err_t ret;
-
-    uint8_t   write_buf[2];
-    write_buf[0]=reg;
-    write_buf[1]=data;
-
-    ret=i2c_master_write_to_device( IO_EXTEND_I2C, IO_EXTEND_ADD, &write_buf, 2, portMAX_DELAY);
-    if(ret!=ESP_OK)
-    {
-        ESP_LOGE(TAG,"---------io_extend_read_reg  fail ");
-
-    }
-
-    return ret;
-
-} 
-
-#endif
 //------------------------------- end --------------------------------------------------------------------------------------//
 //--------------------------------------------------------------------------------------------------------------------//
 //-----------------------------------------------------------------------------------------------------------------//

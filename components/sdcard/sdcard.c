@@ -226,8 +226,15 @@ void sdcard_init_mount_fs(void)
     slot_config.clk = SD_CLK_PIN;               //clock pin 
     slot_config.cmd = SD_CMD_PIN;               //command pin
     slot_config.d0 = SD_DATA0_PIN;              //data  0  
-
-
+    slot_config.d1 = GPIO_NUM_NC;
+    slot_config.d2 = GPIO_NUM_NC;
+    slot_config.d3 = GPIO_NUM_NC;
+    slot_config.d4 = GPIO_NUM_NC;
+    slot_config.d5 = GPIO_NUM_NC;
+    slot_config.d6 = GPIO_NUM_NC;
+    slot_config.d7 = GPIO_NUM_NC;
+    slot_config.cd = GPIO_NUM_NC;
+    slot_config.wp = GPIO_NUM_NC;
 
     // Enable internal pullups on enabled pins. The internal pullups
     // are insufficient however, please make sure 10k external pullups are

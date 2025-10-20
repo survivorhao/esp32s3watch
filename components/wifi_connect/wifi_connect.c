@@ -105,30 +105,6 @@ void wifi_task(void *Par)
 }
 
 
-
-
-/// @brief Unregister  relevant  handler 
-/// @param NULL
-void wifi_unregister_handler(void) 
-{
-    // 注销事件等
-    // esp_event_handler_instance_unregister(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_instance);
-    // esp_event_handler_instance_unregister(IP_EVENT, ESP_EVENT_ANY_ID, ip_event_instance);
-    // esp_event_handler_unregister_with(ui_event_loop_handle, APP_EVENT, APP_WIFI_SCAN_START, user_wifi_start_handler);
-    // esp_event_handler_unregister_with(ui_event_loop_handle, APP_EVENT, APP_WIFI_CLOSE, user_wifi_close_handler);
-    // vSemaphoreDelete(wifi_mutex);
-
-}
-
-
-
-
-
-
-
-
-
-
 /// @brief  处理default event loop派发的相关wifi事件
 /// @param arg 
 /// @param event_base 
@@ -184,9 +160,6 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
                 esp_netif_deinit();
                 current_wifi_state = WIFI_STATE_CLOSED;
                 ESP_LOGI(TAG, "WiFi deinit complete, state -> CLOSED");
-
-                //unregister wifi handler 
-                wifi_unregister_handler();
 
             }
             break;    
