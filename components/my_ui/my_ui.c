@@ -371,7 +371,8 @@ void my_ui_task(void *par)
 
 
                         // 1. Initial SNTP synchronization successful.  
-2. After the initial synchronization is successful, the local time is considered correct, and the corresponding controls update every second accordingly.
+                        //2. After the initial synchronization is successful, the local time is considered correct, 
+                        //and the corresponding controls update every second accordingly.
                         case UI_MSG_SNTP_SYNED:
 
                             time_t now;

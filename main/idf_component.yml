@@ -12,7 +12,5 @@ dependencies:
   espressif/esp_lcd_touch_ft5x06: ~1.0.6
   espressif/esp_lcd_touch: ^1.1.2
   espressif/esp_lvgl_port: ^2.6.0
-
-  # protocol_examples_common:
-  #   path: ${IDF_PATH}/examples/common_components/protocol_examples_common
+  
   espressif/esp_image_effects: ^1.0.1

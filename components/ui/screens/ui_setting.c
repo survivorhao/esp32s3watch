@@ -364,7 +364,7 @@ void ui_setting_screen_init(void )
 
     lv_obj_set_size(setting_list, LV_PCT(100), LV_PCT(90));  // 示例大小：全宽，80% 高
     lv_obj_set_align(setting_list, LV_ALIGN_CENTER);  // 居中
-    lv_obj_set_pos(setting_list,0,18);
+    lv_obj_set_pos(setting_list,0,30);
     lv_obj_set_style_bg_color(setting_list, lv_color_hex(0xffffff), LV_PART_MAIN);  
     lv_obj_set_style_bg_opa(setting_list, 255, LV_PART_MAIN);  
     lv_obj_set_style_border_color(setting_list, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -570,7 +570,9 @@ void ui_sd_status_screen_init(void)
         const uint16_t freq = card->real_freq_khz < 1000 ? card->real_freq_khz : card->real_freq_khz / 1000;
         const char *max_freq_unit = card->max_freq_khz < 1000 ? "kHz" : "MHz";
         const uint16_t max_freq = card->max_freq_khz < 1000 ? card->max_freq_khz : card->max_freq_khz / 1000;
-        lv_label_set_text_fmt(sd_status_label, "sdcard type is %s\n Speed: %d %s (limit: %d %s)\n", type, freq, freq_unit, max_freq, max_freq_unit);
+        lv_label_set_text_fmt(sd_status_label, 
+        "sdcard type is %s\n Speed: %d %s (limit: %d %s)\n Size: %lluMB\n",
+        type, freq, freq_unit, max_freq, max_freq_unit,((uint64_t) card->csd.capacity) * card->csd.sector_size / (1024 * 1024));
 
 
     }
