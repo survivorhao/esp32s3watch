@@ -36,7 +36,7 @@ enum{
 
     APP_WIFI_CONNECTED,                      //wifi successfully connected    
 
-    APP_WIFI_DISCONNECTED,                  //wifi连接断开
+    APP_WIFI_DISCONNECTED,                  // WiFi connection disconnected
 
     APP_GET_IP,                              //successfully get ip
 
@@ -81,13 +81,13 @@ enum{
 
 
 
-// 定义用于在事件中传递的Wi-Fi列表数据
+// Define the Wi-Fi list data used for passing in events
 typedef struct {
     uint16_t ap_count;
     wifi_ap_record_t *ap_records;
 } wifi_scan_done_data_t;
 
-// 定义用于在事件中传递的Wi-Fi连接请求数据
+// Define data for Wi-Fi connection requests to be passed in events.
 typedef struct {
     char ssid[33];
     char password[64];
@@ -95,25 +95,25 @@ typedef struct {
 
 
 
-//天气数据包含今天天气数据 和 三天天气数据
+// The weather data includes today's weather data and three-day weather data.
 typedef struct
 {
-    //位置
+    // Position
     char location[32];
 
     //today temperature
     char  today_tem[8];
 
-    //今天天气字符串
+    // Today's weather string
     char today_weather[16];
 
-    //今天天气code
+    // Today's weather code
     int today_weather_code;
 
-    //三天温度范围数据，依次为 今天 / 明天 /后天
+    // Three-day temperature range data, in order: today / tomorrow / the day after tomorrow
     char  _3day_tem_range[3][8];
     
-    //三天天气code，依次为 今天 / 明天 /后天
+    // Three-day weather code, in order: Today / Tomorrow / The day after tomorrow
     int  _3day_weather[3];
 
 
@@ -123,13 +123,13 @@ typedef struct
 //file list refresh request 
 typedef struct 
 {
-    //1,目录
+    // 1. Table of Contents
     bool is_directory;
 
-    //List中的name
+    // The name in the List
     char name[32];
 
-    //当前sd路径
+    // Current sd path
     char current_path[64];
 
     char ext_name[16];
@@ -154,9 +154,9 @@ typedef struct
 typedef struct 
 {
     char current_path[SD_PATH_MAX];
-    file_item_t *items;   // 动态数组
+    file_item_t *items;   // Dynamic Array
     uint8_t  item_count;
-    esp_err_t err;        // 错误码
+    esp_err_t err;        // Error code
 } file_refresh_res_data_t;
 
 

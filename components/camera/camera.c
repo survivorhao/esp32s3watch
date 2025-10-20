@@ -43,7 +43,7 @@ static const char * TAG="app_camera ";
 static uint8_t *frame_out_buf[2] = {NULL, NULL};  
 
 
-//输入旋转像素数据
+// Input rotated pixel data
 static esp_imgfx_data_t in_image;
 
 //every frame buffer have a semaphore
@@ -410,7 +410,7 @@ void app_camera_lcd(void)
  */
 void app_camera_double_buff_init(void) 
 {
-    // 预分配双缓冲
+    // Pre-allocated double buffering
     frame_out_buf[0] = heap_caps_aligned_alloc(128, 240 * 320 * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     frame_out_buf[1] = heap_caps_aligned_alloc(128, 240 * 320 * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     assert(frame_out_buf[0] && frame_out_buf[1]);
@@ -421,15 +421,15 @@ void app_camera_double_buff_init(void)
     assert(in_image.data);
 
 
-    // 创建信号量，初始可用
+    // Create a semaphore, initially available
     frame_buf_sem[0] = xSemaphoreCreateBinary();
     frame_buf_sem[1] = xSemaphoreCreateBinary();
 
-    //表明两个buf均可用
+    // Indicates that both buffers are available.
     xSemaphoreGive(frame_buf_sem[0]);
     xSemaphoreGive(frame_buf_sem[1]);
 
-    // 创建队列（传结构体）
+    // Create a queue (passing a struct)
     xQueueLCDFrame = xQueueCreate(2, sizeof(frame_buf_info_t));
     if(!xQueueLCDFrame)
     {
@@ -463,12 +463,12 @@ void app_camera_double_buff_init(void)
 void save_frame_to_bmp(const char* out_image)
 {
 
-    //第一次发送保存帧请求
+    // First time sending a save frame request
     if(first_save_camera_frame_flag==1)
     {
         first_save_camera_frame_flag=0;
 
-        // 检查并创建目录
+        // Check and create directory
         struct stat st;
         if (stat(CAMERA_SAVED_PIC_PATH, &st) != 0) 
         {
@@ -484,7 +484,7 @@ void save_frame_to_bmp(const char* out_image)
     char filename[64];
     snprintf(filename, sizeof(filename), "/sdcard/camera/fra_%04d.bmp", camera_frame_save_file_counter++);
 
-    // 打开文件,如果存在文件则清空
+    // Open the file, and if the file exists, clear its contents.
     FILE* f = fopen(filename, "wb");
     if (!f) {
         ESP_LOGE(TAG, "Failed to open file %s", filename);
@@ -501,7 +501,7 @@ void save_frame_to_bmp(const char* out_image)
         return;
     }
 
-    // 转换 RGB565 到 RGB888 (BGR 顺序 for BMP)
+    // Convert RGB565 to RGB888 (BGR order for BMP)
     // uint16_t* rgb565_data = (uint16_t*)out_image->data;
     uint16_t* rgb565_data = (uint16_t*)out_image;
     for (int i = 0; i < width * height; i++) 
@@ -517,19 +517,19 @@ void save_frame_to_bmp(const char* out_image)
         uint8_t g8 = (g6 << 2) | (g6 >> 4);
         uint8_t b8 = (b5 << 3) | (b5 >> 2);
 
-        // BMP 使用 BGR 顺序
+        // BMP uses BGR order
         rgb888_buf[i * 3 + 0] = b8;
         rgb888_buf[i * 3 + 1] = g8;
         rgb888_buf[i * 3 + 2] = r8;
     }
 
-    // BMP 文件头 (14 bytes)
+    // BMP File Header (14 bytes)
     uint8_t bmp_header[14] = {
-        'B', 'M',               // 签名
-        0, 0, 0, 0,             // 文件大小 (稍后填充)
-        0, 0,                   // 保留
-        0, 0,                   // 保留
-        54, 0, 0, 0             // 数据偏移 (14 + 40 = 54)
+        'B', 'M',               // Signature
+        0, 0, 0, 0,             // File size (to be filled in later)
+        0, 0,                   // Keep
+        0, 0,                   // Keep
+        54, 0, 0, 0             // Data offset (14 + 40 = 54)
     };
     uint32_t file_size = 54 + rgb888_size;
     bmp_header[2] = (uint8_t)(file_size & 0xFF);
@@ -537,42 +537,42 @@ void save_frame_to_bmp(const char* out_image)
     bmp_header[4] = (uint8_t)((file_size >> 16) & 0xFF);
     bmp_header[5] = (uint8_t)((file_size >> 24) & 0xFF);
 
-    // DIB 头 (BITMAPINFOHEADER, 40 bytes)
+    // DIB Header (BITMAPINFOHEADER, 40 bytes)
     uint8_t dib_header[40] = {
-        40, 0, 0, 0,            // 头大小
-        0, 0, 0, 0,             // 宽度 (240)
-        0, 0, 0, 0,             // 高度 (-320, top-down)
-        1, 0,                   // 平面数 (biPlanes=1)
-        24, 0,                  // 位深度 (24 bpp)
-        0, 0, 0, 0,             // 压缩 (BI_RGB=0)
-        0, 0, 0, 0,             // 图像大小 (rgb888_size, 稍后填充)
-        0, 0, 0, 0,             // X 分辨率 (0)
-        0, 0, 0, 0,             // Y 分辨率 (0)
-        0, 0, 0, 0,             // 调色板颜色数 (0)
-        0, 0, 0, 0              // 重要颜色数 (0)
+        40, 0, 0, 0,            // Head size
+        0, 0, 0, 0,             // Width (240)
+        0, 0, 0, 0,             // Altitude (-320, top-down)
+        1, 0,                   // Plane count (biPlanes=1)
+        24, 0,                  // Bit depth (24 bpp)
+        0, 0, 0, 0,             // Compression (BI_RGB=0)
+        0, 0, 0, 0,             // Image size (rgb888_size, to be filled later)
+        0, 0, 0, 0,             // X Resolution (0)
+        0, 0, 0, 0,             // Y Resolution (0)
+        0, 0, 0, 0,             // Number of palette colors (0)
+        0, 0, 0, 0              // Number of important colors (0)
     };
-    // 宽度 240
+    // Width 240
     dib_header[4] = (uint8_t)(width & 0xFF);
     dib_header[5] = (uint8_t)((width >> 8) & 0xFF);
-    // 高度 -320 (top-down，避免翻转像素数据)
+    // Height -320 (top-down, avoid flipping pixel data)
     int32_t dib_height = -height;
     dib_header[8] = (uint8_t)(dib_height & 0xFF);
     dib_header[9] = (uint8_t)((dib_height >> 8) & 0xFF);
     dib_header[10] = (uint8_t)((dib_height >> 16) & 0xFF);
     dib_header[11] = (uint8_t)((dib_height >> 24) & 0xFF);
-    // 图像大小
+    // Image size
     uint32_t img_size = rgb888_size;
     dib_header[20] = (uint8_t)(img_size & 0xFF);
     dib_header[21] = (uint8_t)((img_size >> 8) & 0xFF);
     dib_header[22] = (uint8_t)((img_size >> 16) & 0xFF);
     dib_header[23] = (uint8_t)((img_size >> 24) & 0xFF);
 
-    // 写入头和数据
+    // Write header and data
     fwrite(bmp_header, 1, sizeof(bmp_header), f);
     fwrite(dib_header, 1, sizeof(dib_header), f);
     fwrite(rgb888_buf, 1, rgb888_size, f);
 
-    // 释放缓冲
+    // Release buffer
     heap_caps_free(rgb888_buf);
 
     fclose(f);

@@ -47,7 +47,7 @@ sdmmc_card_t *card;
 
 #define     SD_PIC_DIR                 "/sdcard/pic/"
 
-//指向存放img data数据的Buffer,分配在heap上
+// Pointer to the Buffer storing img data, allocated on the heap.
 uint16_t *img_data=NULL;
 
 
@@ -57,24 +57,24 @@ typedef struct {
     uint32_t bfSize;
     uint16_t bfReserved1;
     uint16_t bfReserved2;
-    uint32_t bfOffBits;   // 像素数据偏移
-} __attribute__((packed)) bmp_file_header_t;    //强制不内存对齐
+    uint32_t bfOffBits;   // Pixel data offset
+} __attribute__((packed)) bmp_file_header_t;    // Force no memory alignment
 
 
 // BITMAPV5HEADER (124 bytes)
 typedef struct {
-    uint32_t biSize;          // DIB头部字段的size 应该为124 Byte =0x7c
+    uint32_t biSize;          // The size of the DIB header field should be 124 bytes = 0x7c
     int32_t  biWidth;
-    int32_t  biHeight;        // biHeight >0 从下到上， biHeight<0 从上到下
+    int32_t  biHeight;        // biHeight > 0 means from bottom to top, biHeight < 0 means from top to bottom.
     uint16_t biPlanes;        // 1
     uint16_t biBitCount;      // 16, 24, 32
-    uint32_t biCompression;   // 0 = BI_RGB (无压缩)
+    uint32_t biCompression;   // 0 = BI_RGB (no compression)
     uint32_t biSizeImage;
     int32_t  biXPelsPerMeter;
     int32_t  biYPelsPerMeter;
     uint32_t biClrUsed;
     uint32_t biClrImportant;
-    // V5 扩展字段 (40 bytes more to make 124)
+    // V5 extended field (40 bytes additional to make 124)
     uint32_t biRedMask;
     uint32_t biGreenMask;
     uint32_t biBlueMask;
@@ -88,23 +88,23 @@ typedef struct {
     uint32_t biCSTransAlpha;
     uint32_t biCSTransProfile;
     uint32_t biReserved;
-} __attribute__((packed)) bmp_dib_header_t;         //强制不内存对齐
+} __attribute__((packed)) bmp_dib_header_t;         // Force no memory alignment
 
 
    // Add this new structure for 40-byte DIB header
 typedef struct {
     uint32_t biSize;          // 40
     int32_t  biWidth;
-    int32_t  biHeight;        // biHeight >0 从下到上， biHeight<0 从上到下
+    int32_t  biHeight;        // biHeight > 0: from bottom to top, biHeight < 0: from top to bottom
     uint16_t biPlanes;        // 1
     uint16_t biBitCount;      // 16, 24, 32
-    uint32_t biCompression;   // 0 = BI_RGB (无压缩) or 3 = BI_BITFIELDS
+    uint32_t biCompression;   // 0 = BI_RGB (no compression) or 3 = BI_BITFIELDS
     uint32_t biSizeImage;
     int32_t  biXPelsPerMeter;
     int32_t  biYPelsPerMeter;
     uint32_t biClrUsed;
     uint32_t biClrImportant;
-} __attribute__((packed)) bmp_info_header_t;  // 强制不内存对齐
+} __attribute__((packed)) bmp_info_header_t;  // Force no memory alignment
 
 
 //----------------------------------------------------------------------------------------------------------------------------
@@ -218,7 +218,7 @@ void sdcard_init_mount_fs(void)
     // Modify slot_config.gpio_cd and slot_config.gpio_wp if your board has these signals.
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
 
-    // Set bus width to use,使用一个data 线
+    // Set bus width to use, using one data line
     slot_config.width = 1;
 
     // On chips where the GPIOs used for SD card can be configured, set them in
@@ -304,11 +304,11 @@ void list_dir(const char *path)
 
 
 
-// RGB888 到 RGB565 转换 (忽略 Alpha for 32-bit)
+// RGB888 to RGB565 Conversion (Ignoring Alpha for 32-bit)
 static uint16_t rgb888_to_565(uint8_t r, uint8_t g, uint8_t b) 
 {   
     volatile uint16_t data=((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);   
-    //交换高低字节
+    // Swap high and low bytes
     return  ((((uint8_t)data)<<8)|((uint8_t)(data>>8)));
 
 }
@@ -325,7 +325,7 @@ static esp_err_t read_bmp_and_display(const char *file_path)
 
     bmp_file_header_t file_hdr;
     
-    // 头部字段不对，直接返回
+    // The header field is incorrect; return immediately.
     if (fread(&file_hdr, sizeof(bmp_file_header_t), 1, f) != 1 || file_hdr.bfType != 0x4D42) 
     {
         ESP_LOGE(TAG, "Invalid BMP file header");
@@ -333,25 +333,25 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         return ESP_FAIL;
     }
 
-    // 先读取 DIB Header 的 biSize (4 bytes) 来判断头部大小
+    // First, read the biSize (4 bytes) of the DIB Header to determine the header size.
     uint32_t biSize;
     if (fread(&biSize, sizeof(uint32_t), 1, f) != 1) {
         ESP_LOGE(TAG, "Failed to read DIB header size");
         fclose(f);
         return ESP_FAIL;
     }
-    fseek(f, -sizeof(uint32_t), SEEK_CUR);  // 回退到 DIB Header 开始位置
+    fseek(f, -sizeof(uint32_t), SEEK_CUR);  // Rollback to the start position of the DIB Header
 
-    // 公共字段
+    // Public field
     int width, height;
     uint16_t bit_count;
     uint32_t compression;
-    bool is_bottom_up;  // 注意：这里命名保持原样，但实际表示是否 top-down (biHeight < 0)
+    bool is_bottom_up;  // Note: The naming is kept as is here, but it actually indicates whether it is top-down (biHeight < 0).
 
     //124byte DIB Header
     if (biSize == 124) 
     {
-        // 读取 V5 Header (124 bytes)
+        // Read V5 Header (124 bytes)
         bmp_dib_header_t dib_hdr;
         if (fread(&dib_hdr, sizeof(bmp_dib_header_t), 1, f) != 1 || dib_hdr.biPlanes != 1) {
             ESP_LOGE(TAG, "Unsupported DIB header (must be V5)");
@@ -376,7 +376,7 @@ static esp_err_t read_bmp_and_display(const char *file_path)
     //40byte DIB Header
     else if (biSize == 40) 
     {
-        // 读取 INFO Header (40 bytes)
+        // Read INFO Header (40 bytes)
         bmp_info_header_t dib_hdr;
         if (fread(&dib_hdr, sizeof(bmp_info_header_t), 1, f) != 1 || dib_hdr.biPlanes != 1) 
         {
@@ -412,7 +412,7 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         return ESP_FAIL;
     }
 
-    // 颜色深度
+    // Color depth
     if (bit_count < 16) 
     {
         ESP_LOGE(TAG, "Unsupported bit depth: %"PRIu16"(<16)", bit_count);
@@ -420,13 +420,13 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         return ESP_FAIL;
     }
 
-    // 跳到像素数据
+    // Jump to pixel data
     fseek(f, file_hdr.bfOffBits, SEEK_SET);
 
-    // 分配 RGB565 缓冲 (使用 PSRAM)
+    // Allocate RGB565 buffer (using PSRAM)
     if(img_data !=NULL)
     {
-        //释放上次在heap上分配的memory
+        // Release the memory previously allocated on the heap.
         free(img_data);
         img_data=NULL;
 
@@ -440,13 +440,13 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         return ESP_FAIL;
     }
 
-    // 计算每行 padding (BMP 行以 4 字节对齐)
+    // Calculate padding for each row (BMP rows are aligned to 4 bytes)
     int bytes_per_pixel = bit_count / 8;
     int row_bytes = width * bytes_per_pixel;
     int padding = (4 - (row_bytes % 4)) % 4;
-    int row_size_with_padding = row_bytes + padding;  // 整行大小，包括填充
+    int row_size_with_padding = row_bytes + padding;  // Entire line size, including padding
 
-    // 分配临时行缓冲区（使用 PSRAM 以节省内部 RAM）
+    // Allocate a temporary row buffer (using PSRAM to save internal RAM)
     uint8_t *row_buffer = (uint8_t *)heap_caps_malloc(row_size_with_padding, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (!row_buffer) {
         ESP_LOGE(TAG, "Failed to allocate row buffer");
@@ -458,7 +458,7 @@ static esp_err_t read_bmp_and_display(const char *file_path)
 
     for (int y = 0; y < height; y++)
     {
-        // 一次读取整行数据，包括填充,单次读取太少反复io浪费资源
+        // Read the entire line of data at once, including padding. Reading too little data each time causes repeated I/O and wastes resources.
         if (fread(row_buffer, row_size_with_padding, 1, f) != 1) {
             ESP_LOGE(TAG, "Failed to read row data");
             heap_caps_free(row_buffer);
@@ -469,7 +469,7 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         }
 
         int lv_y = (is_bottom_up ? y : height - 1 - y);  
-        uint16_t *dest_ptr = &img_data[lv_y * width];  // 目标行指针
+        uint16_t *dest_ptr = &img_data[lv_y * width];  // Target row pointer
 
         if (bit_count == 16) 
         {
@@ -477,7 +477,7 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         }
         else if (bit_count == 24) 
         {
-            // 24-bit: BGR888 转换到 RGB565
+            // 24-bit: BGR888 to RGB565 conversion
             uint8_t *src_ptr = row_buffer;
             for (int x = 0; x < width; x++) 
             {
@@ -489,20 +489,20 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         }
         else if (bit_count == 32) 
         {
-            // 32-bit: BGRA8888 转换到 RGB565 (忽略 A)
+            // 32-bit: BGRA8888 to RGB565 conversion (ignoring A)
             uint8_t *src_ptr = row_buffer;
             for (int x = 0; x < width; x++) 
             {
                 uint8_t b = src_ptr[x * 4 + 0];
                 uint8_t g = src_ptr[x * 4 + 1];
                 uint8_t r = src_ptr[x * 4 + 2];
-                // uint8_t a = src_ptr[x * 4 + 3];  // 忽略
+                // uint8_t a = src_ptr[x * 4 + 3];  // Ignore
                 dest_ptr[x] = rgb888_to_565(r, g, b);
             }
         }
     }
 
-    // 释放行缓冲区
+    // Flush the line buffer
     heap_caps_free(row_buffer);
     fclose(f);
 
@@ -511,7 +511,7 @@ static esp_err_t read_bmp_and_display(const char *file_path)
     //make sure lvgl api thread safe 
     if(lvgl_port_lock(500)==true)
     {
-        // 创建 LVGL 图像 widget (RGB565)
+        // Create an LVGL image widget (RGB565)
         static  lv_img_dsc_t img_dsc;
         img_dsc.header.always_zero = 0,
         img_dsc.header.w = width,
@@ -521,7 +521,7 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         img_dsc.data = (const uint8_t *)img_data,
         lv_img_set_src(image_display, &img_dsc);
 
-        //切换屏幕
+        // Switch screen
         lvgl_port_unlock();
         ESP_LOGI(TAG, "BMP loaded and displayed (bit depth: %"PRIu16") \n", bit_count);
     }
@@ -530,7 +530,7 @@ static esp_err_t read_bmp_and_display(const char *file_path)
         ESP_LOGE(TAG,"take lvgl mutex fail (file %s,func %s,line %d)\n",__FILE__, __func__, __LINE__);
 
     }
-    // 注意: img_data 需在 widget 销毁时释放 (可选添加清理任务)
+    // Note: img_data needs to be released when the widget is destroyed (optionally add a cleanup task).
     return ESP_OK;
 }
 
@@ -542,7 +542,7 @@ static void user_sd_refresh_handler(void *arg, esp_event_base_t event_base, int3
 
     if(!sd_mount_success)
     {
-        //未挂载sd卡，直接返回error
+        // If the SD card is not mounted, directly return an error.
         file_refresh_res_data_t data={
             .current_path="please mount sd first",
 
@@ -552,17 +552,17 @@ static void user_sd_refresh_handler(void *arg, esp_event_base_t event_base, int3
 
         };
 
-        //发送file list refresh 完成数据
+        // Send file list refresh to complete data.
         esp_event_post_to(ui_event_loop_handle, APP_EVENT, APP_FILE_REFRESH_RESPONSE, &data, sizeof(data), portMAX_DELAY);
         return ;
     }
 
     file_refresh_req_data_t *data=(file_refresh_req_data_t* )event_data;
 
-    //存放file list refresh 响应数据
+    // Store the response data for the file list refresh.
     file_refresh_res_data_t result; 
     
-    //点击的是目录，列出指定目录下的内容
+    // Clicked on the directory, list the contents under the specified directory.
     if(data->is_directory)
     {
         //refresh data->name !=0 indicate this refresh request is sent by click directory
@@ -631,11 +631,11 @@ static void user_sd_refresh_handler(void *arg, esp_event_base_t event_base, int3
 
 
     }
-    //点击的是文件，判断文件类型
+    // Clicked on a file, determine the file type
     else
     {
 
-        //bmp 图片，不支持解析png图片！！！
+        // BMP images are supported; PNG images are not supported for parsing!!!
         if (strcasecmp(data->ext_name, "bmp") == 0)
         {
 
@@ -689,7 +689,7 @@ void delete_all_in_dir(const char *path)
     struct dirent *entry;
     char fullpath[512];
     while ((entry = readdir(dir)) != NULL) {
-        // 跳过 "." 和 ".."
+        // Skip "." and ".."
         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
             continue;
         }
@@ -699,11 +699,11 @@ void delete_all_in_dir(const char *path)
         if (stat(fullpath, &st) == 0) {
             if (S_ISDIR(st.st_mode)) 
             {
-                // 递归删除子目录
+                // Recursively delete subdirectories
                 delete_all_in_dir(fullpath);
                 rmdir(fullpath);
             } else {
-                // 删除文件
+                // Delete file
                 remove(fullpath);
             }
         }

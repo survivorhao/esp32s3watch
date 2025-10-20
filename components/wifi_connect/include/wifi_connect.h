@@ -7,17 +7,17 @@
 
 
 
-// WiFi 状态枚举
+// WiFi Status Enumeration
 typedef enum {
-    WIFI_STATE_CLOSED=0x00,     // 关闭：所有资源已 deinit
-    WIFI_STATE_CLOSING,         //关闭中，此时不可调用任何api
-    WIFI_STATE_INITING,         // 正在初始化：esp_wifi_start() 已调用，但未收到 START 事件
-    WIFI_STATE_IDLE,            // 空闲：已初始化完成，可以调用 scan/connect
-    WIFI_STATE_BUSY,            // 忙碌：正在 scan 或 connect
-    WIFI_STATE_CONNECTED,       //成功连接wifi
-    WIFI_STATE_GETIP,           //成功get ip address
+    WIFI_STATE_CLOSED=0x00,     // Close: All resources have been deinitialized
+    WIFI_STATE_CLOSING,         // Closing, no API calls can be made at this time.
+    WIFI_STATE_INITING,         // Initializing: esp_wifi_start() has been called, but the START event has not been received yet.
+    WIFI_STATE_IDLE,            // Idle: Initialization complete, ready to call scan/connect functions.
+    WIFI_STATE_BUSY,            // Busy: currently scanning or connecting
+    WIFI_STATE_CONNECTED,       // Successfully connected to WiFi
+    WIFI_STATE_GETIP,           // Successfully obtained IP address
 
-    WIFI_STATE_HTTP_CLENT,      //发起http client 过程
+    WIFI_STATE_HTTP_CLENT,      // The process of initiating an HTTP client
 
 
 
@@ -25,7 +25,7 @@ typedef enum {
 
 
 extern  wifi_state_t  current_wifi_state;
-extern SemaphoreHandle_t wifi_mutex ;          // 互斥量保护状态和 WiFi 操作,确保current_wifi_state的改变可靠
+extern SemaphoreHandle_t wifi_mutex ;          // Mutex protects the state and WiFi operations to ensure reliable changes to current_wifi_state.
 
 
 void wifi_task(void *Par);

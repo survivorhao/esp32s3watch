@@ -28,24 +28,24 @@ static const char *TAG = "weather_srv";
 
 #define MAX_HTTP_OUTPUT_BUFFER 2048
 
-// 今天天气api,地址武汉
+// Today's weather API, location Wuhan
 #define TODAY_WEATHER_URL_PREFIX    "https://api.seniverse.com/v3/weather/now.json?key=SFj3LEY7zNwXAZt1V&location="
 #define TODAY_WEATHER_URL_SUFFIX    "&language=en&unit=c"
 
-// 未来三天天气api,地址武汉
+// Weather API for the next three days, location: Wuhan
 #define _3_TODAY_WEATHER_URL_PREFIX    "https://api.seniverse.com/v3/weather/daily.json?key=SFj3LEY7zNwXAZt1V&location="
 #define _3_TODAY_WEATHER_URL_SUFFIX    "&language=en&unit=c&start=0&days=5"
 
 weather_data_t today_weather;
 
 
-SemaphoreHandle_t weather_request_mutex = NULL;          // 互斥量保护状态和 WiFi 操作,确保current_wifi_state的改变可靠
+SemaphoreHandle_t weather_request_mutex = NULL;          // Mutex protects the state and WiFi operations to ensure reliable changes to current_wifi_state.
 
 static char final_today_weather_url[256];
 
 static char final_3_today_weather_url[256];
 
-//默认查询wuhan天气
+// Default query: Wuhan weather
 char weather_position[32]="wuhan";
 
 
@@ -77,7 +77,7 @@ void parse_today_weather_json(const char *json_str);
 
 void weather_register_weathe_service_handler(void)
 {
-    // 注册sntp request handler
+    // Register SNTP request handler
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_WEATHER_REQUEST, user_weather_srv_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_WEATHER_POSITION_CHANGE, user_weather_pos_change_handler, NULL)); 
 
@@ -97,20 +97,20 @@ static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int
         return ;
     }
     
-    //上次发送weather request时的tick值
+    // The tick value when the weather request was last sent
     static TickType_t last_tick=0;
 
-    //当前tick值
+    // Current tick value
     TickType_t now_tick=xTaskGetTickCount();
 
-    //两次发送weather request 小于6000*10 ms=60s 直接忽略
+    // If two weather requests are sent within less than 6000*10 ms = 60 seconds, ignore the second request directly.
     if(now_tick -last_tick<1000)
     {
         ESP_LOGE(TAG,"request weather too frequency ");
         return ;
     }
 
-    //在成功发送weather request前提下改变上次tick值
+    // Change the previous tick value before successfully sending the weather request.
     last_tick= now_tick;
 
     //set http client access url 
@@ -130,7 +130,7 @@ static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int
 
             .transport_type = HTTP_TRANSPORT_OVER_SSL, // https
 
-            .crt_bundle_attach = esp_crt_bundle_attach, // 使用官方内置的一套可信的根证书（CA）集合，来验证 HTTPS 网站提供的证书合法性
+            .crt_bundle_attach = esp_crt_bundle_attach, // Use the official built-in set of trusted root certificates (CAs) to verify the legitimacy of the certificates provided by HTTPS websites.
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -150,14 +150,14 @@ static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int
 
     // ESP_LOGI("mytest", "receive response %s", weather_response_buffer);
 
-    //将今天的天气情况重要信息存在today_weather全局变量中
+    // Store the important information about today's weather in the global variable today_weather.
     parse_today_weather_json(weather_response_buffer);
 
 
-    //访问近三天天气，改变访问的url即可
+    // To access the weather for the past three days, simply change the URL you are accessing.
     esp_http_client_set_url(client,final_3_today_weather_url);
 
-    //此函数默认为blocking执行完毕返回
+    // This function defaults to blocking execution until completion before returning.
     err = esp_http_client_perform(client);
     if (err == ESP_OK) 
     {
@@ -175,7 +175,7 @@ static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int
 
     ESP_LOGW(TAG,"close http connec");
     
-    //关闭http连接
+    // Close the HTTP connection
     esp_http_client_cleanup(client);
 
     // printf("\n location %s ,today_tem %s ,today_weather %s, wea code %d ",today_weather.location, today_weather.today_tem, today_weather.today_weather,today_weather.today_weather_code);
@@ -223,17 +223,17 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         ESP_LOGI(TAG, "HTTP_EVENT_ON_CONNECTED");
         break;
 
-        // client 向server发送完成 请求头部字段
+        // The client sends a completion request header field to the server.
     case HTTP_EVENT_HEADER_SENT:
         ESP_LOGI(TAG, "client finish send headers");
         break;
 
-        // 正在从server 接收 响应头部字段
+        // Receiving response header fields from the server.
     case HTTP_EVENT_ON_HEADER:
         ESP_LOGD(TAG, "HTTP_EVENT_ON_HEADER, key=%s, value=%s", evt->header_key, evt->header_value);
         break;
 
-        // 从server 接收数据时发生
+        // Occurred when receiving data from the server
     case HTTP_EVENT_ON_DATA:
         ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
         
@@ -285,7 +285,7 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 
         break;
 
-        // 完成http 会话
+        // Complete the HTTP session
     case HTTP_EVENT_ON_FINISH:
         ESP_LOGI(TAG, "HTTP_EVENT_ON_FINISH");
         if (output_buffer != NULL)
@@ -297,7 +297,7 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         }
         output_len = 0;
         break;
-        // client server 连接断开
+        // Client-server connection disconnected
     case HTTP_EVENT_DISCONNECTED:
         ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
         int mbedtls_err = 0;
@@ -315,7 +315,7 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         output_len = 0;
         break;
 
-        // 处理重定向事件
+        // Handle redirect events
     case HTTP_EVENT_REDIRECT:
         ESP_LOGI(TAG, "HTTP_EVENT_REDIRECT");
         break;
@@ -335,23 +335,23 @@ void parse_today_weather_json(const char *json_str)
         return;
     }
 
-    // results 是数组
+    // results is an array
     cJSON *results = cJSON_GetObjectItem(root, "results");
     if (cJSON_IsArray(results))
     {
-        cJSON *first_result = cJSON_GetArrayItem(results, 0); // 取第一个元素
+        cJSON *first_result = cJSON_GetArrayItem(results, 0); // Get the first element
 
-        // location 对象
+        // location object
         cJSON *location = cJSON_GetObjectItem(first_result, "location");
         if (cJSON_IsObject(location))
         {
             cJSON *name = cJSON_GetObjectItem(location, "name");
 
-            // 位置
+            // Position
             strcpy(today_weather.location, name->valuestring);
         }
 
-        // now 对象
+        // now object
         cJSON *now = cJSON_GetObjectItem(first_result, "now");
         if (cJSON_IsObject(now))
         {
@@ -359,14 +359,14 @@ void parse_today_weather_json(const char *json_str)
             cJSON *temperature = cJSON_GetObjectItem(now, "temperature");
             cJSON *code=cJSON_GetObjectItem(now,"code");
 
-            // 当天天气字符串
+            // Weather string of the day
             strcpy(today_weather.today_weather, text->valuestring);
 
-            // 当天温度
+            // Temperature of the day
             strcpy(today_weather.today_tem, temperature->valuestring);
 
             char* endptr;
-            today_weather.today_weather_code= strtol(code->valuestring, &endptr, 10); // 10 进制
+            today_weather.today_weather_code= strtol(code->valuestring, &endptr, 10); // Decimal system
                                 
             if (*endptr != '\0') 
             {
@@ -386,7 +386,7 @@ void parse_3day_weather_json(const char *json_str)
         return;
     }
 
-    // results 数组
+    // results array
     cJSON *results = cJSON_GetObjectItem(root, "results");
     if (cJSON_IsArray(results))
     {
@@ -398,7 +398,7 @@ void parse_3day_weather_json(const char *json_str)
         {
             cJSON *name = cJSON_GetObjectItem(location, "name");
 
-            //比较当前得到的位置和之前得到的位置是否相同
+            // Compare the current obtained position with the previously obtained position to check if they are the same.
             if( strcmp(today_weather.location,name->valuestring ) !=0)
             {
                 strcpy(today_weather.location, name->valuestring);
@@ -406,7 +406,7 @@ void parse_3day_weather_json(const char *json_str)
             }
         }
 
-        // 2. daily 预报
+        // 2. Daily Forecast
         cJSON *daily = cJSON_GetObjectItem(first_result, "daily");
         if (cJSON_IsArray(daily))
         {
@@ -423,7 +423,7 @@ void parse_3day_weather_json(const char *json_str)
                 snprintf(today_weather._3day_tem_range[i], sizeof(today_weather._3day_tem_range[i]), "%s-%s", low->valuestring, high->valuestring);
 
                 
-                today_weather._3day_weather[i]= strtol(text_day->valuestring, &endptr, 10); // 10 进制
+                today_weather._3day_weather[i]= strtol(text_day->valuestring, &endptr, 10); // Decimal system
                                 
                 if (*endptr != '\0') 
                 {

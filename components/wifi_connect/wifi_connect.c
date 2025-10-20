@@ -29,12 +29,12 @@ static const char *TAG = "WIFI_TASK";
 
 
 
-// 全局变量
+// Global variable
 wifi_state_t current_wifi_state = WIFI_STATE_CLOSED;
-SemaphoreHandle_t wifi_mutex = NULL;          // 互斥量保护状态和 WiFi 操作,确保current_wifi_state的改变可靠
+SemaphoreHandle_t wifi_mutex = NULL;          // Mutex protects the state and WiFi operations to ensure reliable changes to current_wifi_state.
 
-static esp_event_handler_instance_t wifi_event_instance;    // WiFi 系统事件实例
-static esp_event_handler_instance_t ip_event_instance;      // IP 事件实例
+static esp_event_handler_instance_t wifi_event_instance;    // WiFi System Event Example
+static esp_event_handler_instance_t ip_event_instance;      // IP Event Example
 
 
 //----------------------------------------------------------------------------------------------------------------------------
@@ -51,10 +51,10 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base, in
 
 static void user_wifi_close_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
-// 用户请求扫描
+// User requests scan
 static void user_wifi_start_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
-// 用户请求连接
+// User requests connection
 static void user_wifi_connect_request_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data);
 
 
@@ -71,7 +71,7 @@ static void user_wifi_connect_request_handler(void* arg, esp_event_base_t event_
 /// @param pvParameters 
 void wifi_task(void *Par) 
 {
-    // 初始化 mutex
+    // Initialize mutex
     wifi_mutex = xSemaphoreCreateMutex();
     if (wifi_mutex == NULL) {
         ESP_LOGE(TAG, "Failed to create WiFi mutex");
@@ -79,11 +79,11 @@ void wifi_task(void *Par)
         return;
     }
 
-    // 创建默认事件循环（WiFi 系统事件）
+    // Create the default event loop (WiFi system events)
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
 
-    // 注册 WiFi 系统事件 handler（处理异步事件如 START, STOP 等）
+    // Register WiFi system event handler (handles asynchronous events such as START, STOP, etc.)
     ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_system_event_handler, NULL, &wifi_event_instance));
     ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, ESP_EVENT_ANY_ID, &wifi_system_event_handler, NULL, &ip_event_instance));
 
@@ -100,12 +100,12 @@ void wifi_task(void *Par)
 
 
 
-    // 清理（理论上不会到达）
+    // Cleanup (theoretically should never be reached)
     vTaskDelete(NULL);
 }
 
 
-/// @brief  处理default event loop派发的相关wifi事件
+// / @brief  Handles WiFi events dispatched by the default event loop
 /// @param arg 
 /// @param event_base 
 /// @param event_id 
@@ -120,7 +120,7 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
 
     }
 
-    //处理系统wifi 相关事件
+    // Handle system WiFi-related events
     if (event_base == WIFI_EVENT ) 
     {
        switch (event_id) 
@@ -136,7 +136,7 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
                 //automatic scan nearby wifi
                 ESP_LOGI(TAG,"wifi scan begin,idle -> busy");
                 current_wifi_state = WIFI_STATE_BUSY;
-                esp_wifi_scan_start(NULL, false);  // 非阻塞
+                esp_wifi_scan_start(NULL, false);  // Non-blocking
 
                 
             }
@@ -151,11 +151,11 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
         //sta stop event
         case WIFI_EVENT_STA_STOP:
             
-            // esp_wifi_stop() 成功，允许 deinit
+            // esp_wifi_stop() succeeded, allowing deinit.
             if (current_wifi_state == WIFI_STATE_CLOSING) 
             {
                 ESP_LOGI(TAG, "WiFi stopped, proceeding to deinit");
-                esp_wifi_restore();  // 重置配置
+                esp_wifi_restore();  // Reset configuration
                 esp_wifi_deinit();
                 esp_netif_deinit();
                 current_wifi_state = WIFI_STATE_CLOSED;
@@ -172,11 +172,11 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
                 current_wifi_state = WIFI_STATE_IDLE;
                 ESP_LOGI(TAG, "Scan done, state -> IDLE");
                 
-                // 获取扫描到的 AP 总数
+                // Get the total number of scanned APs
                 uint16_t ap_total_count;
                 ESP_ERROR_CHECK(esp_wifi_scan_get_ap_num(&ap_total_count));
 
-                // 决定实际要获取的数量
+                // Determine the actual quantity to be obtained.
                 uint16_t ap_fetch_count = ap_total_count;
                 if (ap_fetch_count > 5) {
                     ap_fetch_count = 5;
@@ -196,10 +196,10 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
                 
                 
             }
-            //如果current_wifi_state != wifi_state_busy 就会出现scan done了，但是当前已经wifi 已经被deinit 的状态
-            //本质原因是 wifi scan , wifi stop, wifi start都是异步过程，函数返回了不代表操作完成了
-            //会出现一种矛盾状态，scaning 中调用了stop 把WiFi deinit了，之后scan done了
-            //此时要是调用esp_wifi_scan_get_ap_num就会崩溃
+            // If current_wifi_state != wifi_state_busy, a "scan done" event will occur, but the WiFi has already been deinitialized at that point.
+            // The fundamental reason is that wifi scan, wifi stop, and wifi start are all asynchronous processes; the function returning does not mean the operation has completed.
+            // A contradictory situation will occur: during scanning, stop is called which deinitializes the WiFi, and then scan done is triggered afterward.
+            // Calling esp_wifi_scan_get_ap_num at this time will cause a crash.
             else 
             {
                 ESP_LOGW(TAG,"scan done meet illegal state %d",current_wifi_state);
@@ -215,7 +215,7 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
             {
                 current_wifi_state = WIFI_STATE_CONNECTED;
                 ESP_LOGI(TAG, "WiFi successfully connected, state -> CONNECTED");
-                // 可选：post UI 事件通知成功
+                // Optional: post UI event notification success
                 // esp_event_post_to(ui_event_loop_handle, APP_EVENT, APP_WIFI_CONNECT_SUCCESS, NULL, 0, portMAX_DELAY);
             }
 
@@ -225,7 +225,7 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
         //sta  disconnect  event
         case WIFI_EVENT_STA_DISCONNECTED:
 
-            // 如果是esp wifi stop 触发的断开WiFi连接回到closed
+            // If the disconnection is triggered by esp wifi stop, then disconnect the WiFi and return to the closed state.
             if(current_wifi_state == WIFI_STATE_CLOSING)
             {
                 // current_wifi_state=WIFI_STATE_CLOSED;
@@ -235,7 +235,7 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
             }
             else
             {
-                //异常断开连接情况（ap主动关闭/距离太远等事件）
+                // Abnormal disconnection scenarios (e.g., AP actively disconnecting / being out of range, etc.)
                 uint8_t exception_disconnect_flag=1;
 
                 esp_event_post_to(ui_event_loop_handle, APP_EVENT, APP_WIFI_DISCONNECTED, &exception_disconnect_flag, sizeof(uint8_t), portMAX_DELAY);
@@ -245,7 +245,7 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
             break;
         }
     }
-    //处理系统wifi 相关事件
+    // Handle system WiFi-related events
     else if(event_base == IP_EVENT)
     {
         if(event_id==IP_EVENT_STA_GOT_IP)
@@ -256,13 +256,13 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
                 
                 ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
                 
-                // 成功获取IP地址，发布事件
-                char ip_str[16]; // 存储IP地址字符串
+                // Successfully obtained IP address, event published.
+                char ip_str[16]; // Store IP address string
                 sprintf(ip_str, IPSTR, IP2STR(&event->ip_info.ip));
                 
                 ESP_ERROR_CHECK(esp_event_post_to(ui_event_loop_handle,APP_EVENT, APP_GET_IP, ip_str, strlen(ip_str)+1, portMAX_DELAY));
 
-                //自动同步事件
+                // Automatic synchronization event
                 ESP_ERROR_CHECK(esp_event_post_to(ui_event_loop_handle,APP_EVENT, APP_SNTP_REQUEST, NULL,0, portMAX_DELAY));
 
             }
@@ -275,7 +275,7 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
 
 }
 
-// 用户请求扫描
+// User requests scan
 static void  user_wifi_start_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) 
 {
     ESP_LOGI(TAG, "Received UI WIFI_START event");
@@ -290,14 +290,14 @@ static void  user_wifi_start_handler(void* arg, esp_event_base_t event_base, int
     {
         case WIFI_STATE_CLOSED:
 
-            // 从 CLOSED -> INITING：初始化并 start
+            // From CLOSED -> INITING: initialize and start
             current_wifi_state = WIFI_STATE_INITING;
             ESP_LOGI(TAG, "State CLOSED -> INITING");
             esp_netif_init();
             wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
             esp_wifi_init(&cfg);
             esp_wifi_set_mode(WIFI_MODE_STA);
-            esp_wifi_start();  // 异步：返回后等 WIFI_EVENT_STA_START
+            esp_wifi_start();  // Asynchronous: wait for WIFI_EVENT_STA_START after returning
             
 
             break;
@@ -307,17 +307,17 @@ static void  user_wifi_start_handler(void* arg, esp_event_base_t event_base, int
              break;
 
         case WIFI_STATE_INITING:
-            // 正在 initing，忽略或等待（快速点击时阻塞已处理）
+            // Initializing, ignore or wait (blocking during rapid clicks has been handled)
             ESP_LOGW(TAG, "Already INITING, ignoring duplicate START");
             break;
         case WIFI_STATE_IDLE:
-            // 已 IDLE，直接进入 BUSY（如 scan）
+            // Already in IDLE, directly enter BUSY (e.g., scan)
             ESP_LOGI(TAG, "State IDLE -> BUSY (starting scan)");
-            esp_wifi_scan_start(NULL, false);  // 非阻塞，BUSY 状态
+            esp_wifi_scan_start(NULL, false);  // Non-blocking, BUSY state
             current_wifi_state = WIFI_STATE_BUSY;
             break;
         case WIFI_STATE_BUSY:
-            // 忙碌中，忽略
+            // In the midst of busyness, overlooked
             ESP_LOGW(TAG, "WiFi BUSY, ignoring START");
             break;
         case WIFI_STATE_CONNECTED:
@@ -341,7 +341,7 @@ static void  user_wifi_start_handler(void* arg, esp_event_base_t event_base, int
 
 
 
-/// @brief 关闭wifi 释放相应资源
+// / @brief Turn off WiFi and release the corresponding resources
 /// @param arg 
 /// @param event_base 
 /// @param event_id 
@@ -363,11 +363,11 @@ static void user_wifi_close_handler(void* arg, esp_event_base_t event_base, int3
         return ;
     }
 
-    // 从任何活跃状态转换到 CLOSING
+    // Transition from any active state to CLOSING
     current_wifi_state = WIFI_STATE_CLOSING;
     ESP_LOGI(TAG, "State -> CLOSING, calling esp_wifi_stop()");
     
-    // esp_wifi_stop() 是异步的，它将触发 WIFI_EVENT_STA_STOP
+    // esp_wifi_stop() is asynchronous; it will trigger the WIFI_EVENT_STA_STOP event.
     ESP_ERROR_CHECK(esp_wifi_stop());
     
     xSemaphoreGive(wifi_mutex);
@@ -379,7 +379,7 @@ static void user_wifi_close_handler(void* arg, esp_event_base_t event_base, int3
 
 
 
-// 用户请求连接
+// User requests connection
 static void user_wifi_connect_request_handler(void* arg, esp_event_base_t event_base,
                                            int32_t event_id, void* event_data) 
 {
@@ -399,7 +399,7 @@ static void user_wifi_connect_request_handler(void* arg, esp_event_base_t event_
     wifi_connect_data_t *connect_data = (wifi_connect_data_t*) event_data;
     ESP_LOGI(TAG, "Received connect request for SSID: %s", connect_data->ssid);
 
-    // 配置 WiFi STA
+    // Configure WiFi STA (Station)
     wifi_config_t wifi_cfg = {0};
     strncpy((char*)wifi_cfg.sta.ssid, connect_data->ssid, sizeof(wifi_cfg.sta.ssid) - 1);
     strncpy((char*)wifi_cfg.sta.password, connect_data->password, sizeof(wifi_cfg.sta.password) - 1);
@@ -409,9 +409,9 @@ static void user_wifi_connect_request_handler(void* arg, esp_event_base_t event_
     wifi_cfg.sta.pmf_cfg.required = false;
 
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg));
-    ESP_ERROR_CHECK(esp_wifi_connect());  // 异步连接
+    ESP_ERROR_CHECK(esp_wifi_connect());  // Asynchronous connection
 
-    current_wifi_state = WIFI_STATE_BUSY;  // 更新状态到 BUSY (connecting)
+    current_wifi_state = WIFI_STATE_BUSY;  // Update status to BUSY (connecting)
     ESP_LOGI(TAG, "WiFi connect initiated, state -> BUSY");
 
     xSemaphoreGive(wifi_mutex);

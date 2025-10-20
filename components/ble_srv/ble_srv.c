@@ -37,37 +37,37 @@ static local_param_t s_ble_hid_param = {0};
 
 const unsigned char mediaReportMap[] = {
 
-    // --- 顶级集合 (Report ID 3: Media Control) ---
+    // --- Top-level Collection (Report ID 3: Media Control) ---
     0x05, 0x0C,       // Usage Page (Consumer Devices - 0x0C)
     0x09, 0x01,       // Usage (Consumer Control - 0x01)
     0xA1, 0x01,       // Collection (Application)
 
-    0x85, 0x03,       // Report ID (3)  <-- 使用 Report ID 3
+    0x85, 0x03,       // Report ID (3)  <-- Using Report ID 3
 
-    // 1. 定义 5 个媒体按键的输入字段 (Bit Field)
-    0x15, 0x00,       //   Logical Minimum (0)  <-- 0 表示未按下
-    0x25, 0x01,       //   Logical Maximum (1)  <-- 1 表示按下
+    // 1. Define input fields (bit fields) for 5 media keys.
+    0x15, 0x00,       // Logical Minimum (0)  <-- 0 indicates not pressed
+    0x25, 0x01,       // Logical Maximum (1)  <-- 1 indicates pressed
 
-    // 使用 Usage Minimum/Maximum 范围来一次性定义 5 个按键
-    // 确保您定义的这 5 个 Usage ID 顺序是连续的，或者通过多个 Usage Item 定义
+    // Use the Usage Minimum/Maximum range to define 5 buttons at once.
+    // Ensure that the sequence of these 5 Usage IDs you define is continuous, or define them through multiple Usage Items.
     
-    // 方法一：精确定义您需要的 5 个按键（Bit 0 - Bit 4）
+    // Method 1: Precisely define the 5 keys you need (Bit 0 - Bit 4)
     0x09, 0xB5,       //   Usage (Scan Next Track)
     0x09, 0xB6,       //   Usage (Scan Previous Track)
     0x09, 0xCD,       //   Usage (Play/Pause)
     0x09, 0xE9,       //   Usage (Volume Increment)
     0x09, 0xEA,       //   Usage (Volume Decrement)
     
-    0x75, 0x01,       //   Report Size (1 bit) <-- 每个按键占用 1 位
-    0x95, 0x05,       //   Report Count (5)    <-- 共有 5 个按键
-    0x81, 0x02,       //   Input (Data, Var, Abs) <-- 按键数据 (Bit Field)
+    0x75, 0x01,       // Report Size (1 bit) <-- Each key occupies 1 bit
+    0x95, 0x05,       // Report Count (5)    <-- A total of 5 keys
+    0x81, 0x02,       // Input (Data, Var, Abs) <-- Key data (Bit Field)
 
-    // 2. 填充剩余的位，使报告对齐到字节边界（3位填充）
-    0x75, 0x03,       //   Report Size (3 bits) <-- 剩余 3 位
+    // 2. Pad the remaining bits to align the report to the byte boundary (3 bits of padding)
+    0x75, 0x03,       // Report Size (3 bits) <-- Remaining 3 bits
     0x95, 0x01,       //   Report Count (1)
-    0x81, 0x03,       //   Input (Const, Var, Abs) <-- 填充/常量数据
+    0x81, 0x03,       // Input (Const, Var, Abs) <-- Padding/constant data
 
-    // 3. 填充第二个字节 (可选，但推荐使用整数倍的字节)
+    // 3. Pad the second byte (optional, but recommended to use a multiple of bytes)
     0x75, 0x08,       //   Report Size (8 bits)
     0x95, 0x01,       //   Report Count (1)
     0x81, 0x03,       //   Input (Const, Var, Abs)
@@ -259,7 +259,7 @@ static void user_ble_start_handler(void* arg, esp_event_base_t event_base,
         return;
     #endif
 
-    //初始化  Controller layer and BlueDroid  host  stack and 注册gap事件 Call Back 函数 and   创建信号量
+    // Initialize the Controller layer and BlueDroid host stack, register GAP event callback functions, and create semaphores.
     ret = esp_hid_gap_init(HID_DEV_MODE);
     ESP_ERROR_CHECK(ret);
 

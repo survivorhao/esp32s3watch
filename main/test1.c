@@ -177,7 +177,7 @@ void nvs_set_camera_frame_sequence(void)
     err = nvs_get_i32(handle, "frame_seq", (int32_t*)&camera_frame_save_file_counter);
     if (err == ESP_ERR_NVS_NOT_FOUND) 
     {
-        // key 不存在，写入初始值0 
+        // The key does not exist, write the initial value 0.
         nvs_set_i32(handle, "frame_seq", 0);
         nvs_commit(handle);
 
@@ -220,7 +220,7 @@ void nvs_weather_position_init(void)
 
     if (err == ESP_ERR_NVS_NOT_FOUND) 
     {
-        // key 不存在，写入初始值0 
+        // The key does not exist, writing the initial value 0.
         nvs_set_str(handle, "weather_pos", weather_position);
         nvs_commit(handle);
 

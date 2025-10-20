@@ -50,7 +50,7 @@ RTC_NOINIT_ATTR uint32_t rtc_magic;
 
 static void user_sntp_srv_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
-//1s发送一次sntp syned 事件，来改变相应widget
+// Send an SNTP synced event every 1 second to update the corresponding widget.
 static void periodic_timer_callback(void* arg);
 
 static void obtain_time(void);
@@ -283,7 +283,7 @@ void time_update_init(void)
 
 
 
-//1s发送一次sntp syned 事件，来改变相应widget
+// Send an SNTP synced event every 1 second to update the corresponding widget.
 
 /*
  * periodic_timer_callback

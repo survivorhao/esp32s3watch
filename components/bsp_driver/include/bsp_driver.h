@@ -17,9 +17,9 @@
 
 
 
-extern  esp_lcd_panel_handle_t      lcd_panel_handle ;    //tft lcd panel句柄
-extern  esp_lcd_panel_io_handle_t   lcd_io_handle ;       //tft lcd spi 句柄
-extern  esp_lcd_touch_handle_t      tp_handle;            // 触摸屏句柄
+extern  esp_lcd_panel_handle_t      lcd_panel_handle ;    // tft lcd panel handle
+extern  esp_lcd_panel_io_handle_t   lcd_io_handle ;       // TFT LCD SPI handle
+extern  esp_lcd_touch_handle_t      tp_handle;            // Touchscreen handle
 
 
 
@@ -78,12 +78,12 @@ void lcd_draw_pictrue(int x_start, int y_start, int x_end, int y_end, const unsi
 
 void lcd_set_color(int x_start, int y_start, int x_end, int y_end, uint16_t rgb_color);
 
-extern esp_lcd_panel_handle_t      lcd_panel_handle;    //tft lcd panel句柄
+extern esp_lcd_panel_handle_t      lcd_panel_handle;    // tft lcd panel handle
 
 //----------------------------------------------------------------------------------------------------------
-//----------------------------------------- lcd touch 相关 -----------------------------------------------------
+// ----------------------------------------- lcd touch related -----------------------------------------------------
 //----------------------------------------------------------------------------------------------------------
-extern esp_lcd_touch_handle_t      tp_handle;                  // 触摸屏句柄
+extern esp_lcd_touch_handle_t      tp_handle;                  // Touchscreen handle
 
 void  bsp_touch_new(void);
 void tft_touch_read_data(void* par);
@@ -91,7 +91,7 @@ void tft_touch_read_data(void* par);
 
 
 //----------------------------------------------------------------------------------------------------------
-//----------------------------------------- display  and  touch  init 相关 -----------------------------------------------------
+// ----------------------------------------- Display and Touch Initialization Related -----------------------------------------------------
 //----------------------------------------------------------------------------------------------------------
 
 extern lv_display_t *lvgl_disp;

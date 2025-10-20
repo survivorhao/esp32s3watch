@@ -31,7 +31,7 @@ extern int  camera_frame_save_file_counter;
 
 typedef enum {
 
-    //保存当前帧
+    // Save the current frame
     CAMER_CMD_STORE,
 
 } camera_command_type_t;
@@ -39,7 +39,7 @@ typedef enum {
 typedef struct 
 {
     camera_command_type_t type;
-    void *data; // 使用一个通用指针来传递数据
+    void *data; // Use a generic pointer to pass data.
 } camera_command_t;
 
 

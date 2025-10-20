@@ -52,7 +52,7 @@ static void IRAM_ATTR gpio_isr_handler(void* arg);
 
 
 //----------------------------------------------------------------------------------------------------------
-//----------------------------------------- i2c 新 版 本 -----------------------------------------------------
+// ----------------------------------------- i2c New Version -----------------------------------------------------
 //----------------------------------------------------------------------------------------------------------
 
 i2c_master_bus_handle_t     I2C_Master_bus_handle;
@@ -65,7 +65,7 @@ i2c_master_dev_handle_t     I2C_Master_io_extend_dev_handle;
 void   bsp_i2c_driver_init(void)
 {
 
-    //初始化i2c 总线
+    // Initialize the I2C bus
     i2c_master_bus_config_t bus_config = {
         .i2c_port = I2C_NUM_0,
         .sda_io_num = EXAMPLE_I2C_SDA_IO,
@@ -91,23 +91,23 @@ void   bsp_i2c_driver_init(void)
 
 
 //----------------------------------------------------------------------------------------------------------
-//----------------------------------------- lcd相关 -----------------------------------------------------
+// ----------------------------------------- LCD Related -----------------------------------------------------
 //----------------------------------------------------------------------------------------------------------
 
-// 定义液晶屏句柄
-esp_lcd_panel_handle_t      lcd_panel_handle = NULL;    //tft lcd panel句柄
-esp_lcd_panel_io_handle_t   lcd_io_handle = NULL;       //tft lcd spi 句柄
-esp_lcd_touch_handle_t      tp_handle;                  // 触摸屏句柄
+// Define the LCD screen handle
+esp_lcd_panel_handle_t      lcd_panel_handle = NULL;    // TFT LCD panel handle
+esp_lcd_panel_io_handle_t   lcd_io_handle = NULL;       // tft lcd spi handle
+esp_lcd_touch_handle_t      tp_handle;                  // Touchscreen handle
 
 
 
-// 液晶屏初始化
+// LCD screen initialization
 esp_err_t bsp_display_new(void)
 {
     esp_err_t ret = ESP_OK;
-    // 背光初始化
+    // Backlight Initialization
     ESP_RETURN_ON_ERROR(bsp_display_brightness_init(), TAG, "Brightness init failed");
-    // 初始化SPI总线
+    // Initialize the SPI bus
     ESP_LOGD(TAG, "Initialize SPI bus");
     const spi_bus_config_t buscfg = {
         .sclk_io_num = BSP_LCD_SPI_CLK,
@@ -120,7 +120,7 @@ esp_err_t bsp_display_new(void)
     };
     ESP_RETURN_ON_ERROR(spi_bus_initialize(BSP_LCD_SPI_NUM, &buscfg, SPI_DMA_CH_AUTO), TAG, "SPI init failed");
     
-    // 液晶屏控制IO初始化
+    // LCD screen control IO initialization
     ESP_LOGD(TAG, "Install panel IO");
     const esp_lcd_panel_io_spi_config_t io_config = {
         .dc_gpio_num = BSP_LCD_DC,
@@ -133,7 +133,7 @@ esp_err_t bsp_display_new(void)
     };
     ESP_GOTO_ON_ERROR(esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)BSP_LCD_SPI_NUM, &io_config, &lcd_io_handle), err, TAG, "New panel IO failed");
    
-    // 初始化液晶屏驱动芯片ST7789
+    // Initialize the LCD driver chip ST7789
     ESP_LOGD(TAG, "Install LCD driver");
     const esp_lcd_panel_dev_config_t panel_config = {
         .reset_gpio_num = BSP_LCD_RST,
@@ -143,12 +143,12 @@ esp_err_t bsp_display_new(void)
     };
     ESP_GOTO_ON_ERROR(esp_lcd_new_panel_st7789(lcd_io_handle, &panel_config, &lcd_panel_handle), err, TAG, "New panel failed");
     
-    esp_lcd_panel_reset(lcd_panel_handle);  // 液晶屏复位
-    lcd_cs_level(0);  // 拉低CS引脚
-    esp_lcd_panel_init(lcd_panel_handle);  // 初始化配置寄存器
-    esp_lcd_panel_invert_color(lcd_panel_handle, true); // 颜色反转
-    esp_lcd_panel_swap_xy(lcd_panel_handle, true);  // 显示翻转 
-    esp_lcd_panel_mirror(lcd_panel_handle, true, false); // 镜像
+    esp_lcd_panel_reset(lcd_panel_handle);  // LCD screen reset
+    lcd_cs_level(0);  // Pull the CS pin low
+    esp_lcd_panel_init(lcd_panel_handle);  // Initialize configuration register
+    esp_lcd_panel_invert_color(lcd_panel_handle, true); // Color inversion
+    esp_lcd_panel_swap_xy(lcd_panel_handle, true);  // Display flip
+    esp_lcd_panel_mirror(lcd_panel_handle, true, false); // Mirror image
 
     return ret;
 
@@ -165,7 +165,7 @@ err:
 
 
 
-// 背光PWM初始化
+// Backlight PWM Initialization
 esp_err_t bsp_display_brightness_init(void)
 {
     // Setup LEDC peripheral for PWM backlight control
@@ -177,7 +177,7 @@ esp_err_t bsp_display_brightness_init(void)
         .timer_sel = 0,
         .duty = 0,
         .hpoint = 0,
-        .flags.output_invert = true      //使用pmos管驱动lcd背光，pwm接到栅极因此需要Invert  ouput
+        .flags.output_invert = true      // Using a PMOS transistor to drive the LCD backlight, the PWM signal is connected to the gate, so the output needs to be inverted.
     };
     const ledc_timer_config_t LCD_backlight_timer = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
@@ -194,7 +194,7 @@ esp_err_t bsp_display_brightness_init(void)
     return ESP_OK;
 }
 
-// 背光亮度设置
+// Backlight Brightness Setting
 esp_err_t bsp_display_brightness_set(int brightness_percent)
 {
     if (brightness_percent > 100) {
@@ -213,26 +213,26 @@ esp_err_t bsp_display_brightness_set(int brightness_percent)
     return ESP_OK;
 }
 
-// 关闭背光
+// Turn off the backlight
 esp_err_t bsp_display_backlight_off(void)
 {
     return bsp_display_brightness_set(0);
 }
 
-// 打开背光 最亮
+// Turn on the backlight to the brightest setting.
 esp_err_t bsp_display_backlight_on(void)
 {
     return bsp_display_brightness_set(100);
 }
 
 
-// 设置液晶屏颜色
+// Set the LCD screen color
 void lcd_set_color(int x_start, int y_start, int x_end, int y_end, uint16_t rgb_color)
 {
-    //交换高低字节
+    // Swap high and low bytes
     volatile uint16_t color_swap= ((((uint8_t)rgb_color)<<8)|((uint8_t)(rgb_color>>8)));
    
-    // 分配内存 这里分配了液晶屏一行数据需要的大小
+    // Allocate memory: here, the size needed for one row of data on the LCD screen is allocated.
     uint16_t *buffer = (uint16_t *)heap_caps_malloc(BSP_LCD_H_RES * sizeof(uint16_t), MALLOC_CAP_8BIT | MALLOC_CAP_SPIRAM);
 
     if (NULL == buffer)
@@ -243,15 +243,15 @@ void lcd_set_color(int x_start, int y_start, int x_end, int y_end, uint16_t rgb_
     {
         ESP_LOGI(TAG,"set screen back  color");
         
-        for (size_t i = 0; i < (x_end -x_start); i++) // 给缓存中放入颜色数据
+        for (size_t i = 0; i < (x_end -x_start); i++) // Put color data into the cache.
         {
             buffer[i] = color_swap;
         }
-        for (int y = y_start; y < y_end; y++) // 显示整屏颜色
+        for (int y = y_start; y < y_end; y++) // Display full-screen color
         {
             esp_lcd_panel_draw_bitmap(lcd_panel_handle, x_start, y, x_end, y+1, buffer);
         }
-        free(buffer); // 释放内存
+        free(buffer); // Release memory
     }
 }
 
@@ -268,7 +268,7 @@ void lcd_draw_pictrue(int x_start, int y_start, int x_end, int y_end, const unsi
         ESP_LOGE(TAG, "Memory for bitmap is not enough");
         return;
     }
-    memcpy(pixels, gImage, pixels_byte_size);  // 把图片数据拷贝到内存
+    memcpy(pixels, gImage, pixels_byte_size);  // Copy the image data to memory
 
     esp_lcd_panel_draw_bitmap(lcd_panel_handle, x_start,y_start, x_end, y_end, (uint16_t *)pixels);
     heap_caps_free(pixels);
@@ -282,9 +282,9 @@ void lcd_draw_pictrue(int x_start, int y_start, int x_end, int y_end, const unsi
 
 
 //----------------------------------------------------------------------------------------------------------
-//----------------------------------------- lcd touch 相关 -----------------------------------------------------
+// ----------------------------------------- lcd touch related -----------------------------------------------------
 //----------------------------------------------------------------------------------------------------------
-esp_lcd_touch_handle_t      tp_handle;                  // 触摸屏句柄
+esp_lcd_touch_handle_t      tp_handle;                  // Touchscreen handle
 esp_lcd_panel_io_handle_t   tp_io_handle;
 
 void  bsp_touch_new(void)
@@ -294,7 +294,7 @@ void  bsp_touch_new(void)
     esp_lcd_panel_io_i2c_config_t   io_config = ESP_LCD_TOUCH_IO_I2C_FT5x06_CONFIG();
     io_config.scl_speed_hz=100000;
 
-    // 4. 创建 Panel IO 句柄
+    // 4. Create Panel IO Handle
     esp_lcd_new_panel_io_i2c(I2C_Master_bus_handle, &io_config, &tp_io_handle);
 
     esp_lcd_touch_config_t tp_cfg = {
@@ -333,9 +333,9 @@ void tft_touch_read_data(void* par)
     {
         esp_lcd_touch_read_data(tp_handle);
 
-        // 2. 从 tp 句柄中获取解析后的坐标数据
+        // 2. Retrieve the parsed coordinate data from the tp handle.
         touchpad_pressed = esp_lcd_touch_get_coordinates(tp_handle, touch_x, touch_y, touch_strength, &touch_cnt, 1);
-        // 3. 检查是否有触摸点
+        // 3. Check if there is a touch point
         if (touchpad_pressed) 
         {
             ESP_LOGI(TAG, "Touch detected! x=%d, y=%d, strength=%d",
@@ -343,14 +343,14 @@ void tft_touch_read_data(void* par)
    
         } 
 
-        // 4. 等待一段时间再次轮询
-        vTaskDelay(pdMS_TO_TICKS(50)); // 例如每 50 毫秒轮询一次
+        // 4. Wait for a period of time before polling again.
+        vTaskDelay(pdMS_TO_TICKS(50)); // For example, poll every 50 milliseconds.
     }
 }
 
 
 //----------------------------------------------------------------------------------------------------------
-//-----------------------------------------display  and  touch  init 相关 -----------------------------------
+// ----------------------------------------- Display and Touch Initialization Related -----------------------------------
 //----------------------------------------------------------------------------------------------------------
 
 lv_display_t *lvgl_disp= NULL;
@@ -400,8 +400,8 @@ esp_err_t app_lvgl_init(void)
             .mirror_y = false,
         },
         .flags = {
-            .buff_dma = false,   //渲染buffer分配在内部sram
-            .buff_spiram=true,   //渲染buffer分配在psram
+            .buff_dma = false,   // The rendering buffer is allocated in internal SRAM.
+            .buff_spiram=true,   // Render buffer allocated in PSRAM
         }
     };
     lvgl_disp = lvgl_port_add_disp(&disp_cfg);
@@ -424,7 +424,7 @@ esp_err_t app_lvgl_init(void)
 
 
 //----------------------------------------------------------------------------------------------------------
-//-----------------------------------------按键检测 -----------------------------------
+// ----------------------------------------- Key Detection -----------------------------------
 //----------------------------------------------------------------------------------------------------------
 
 
@@ -438,13 +438,13 @@ void bsp_button_init(void)
         .pull_down_en = 0,                 
         .pull_up_en = 1                     // enable internal pull up
     };
-    // 根据上面的配置 设置GPIO
+    // Set up the GPIO according to the above configuration.
     gpio_config(&gpio_conf);
 
     gpio_install_isr_service(0);
 
     
-    // 给GPIO0添加中断处理
+    // Add interrupt handling for GPIO0
     gpio_isr_handler_add(BSP_BUTTON_IO, gpio_isr_handler, (void *)BSP_BUTTON_IO);
 
 }
@@ -468,7 +468,7 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
         cmd.type=CAMER_CMD_STORE;
         cmd.data=NULL;
 
-        xQueueSendFromISR(g_Camera_event_queue, &cmd, &xHigherPriorityTaskWoken); // 把入口参数值发送到队列
+        xQueueSendFromISR(g_Camera_event_queue, &cmd, &xHigherPriorityTaskWoken); // Send the input parameter value to the queue
     
         if(xHigherPriorityTaskWoken)
         {

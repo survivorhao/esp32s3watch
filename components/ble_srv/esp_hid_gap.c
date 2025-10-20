@@ -600,12 +600,12 @@ static void ble_gap_event_handler(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_p
         break;
 
     case ESP_GAP_BLE_NC_REQ_EVT: // ESP_IO_CAP_IO
-        /*数字比较请求事件 */
+        /* Numeric Comparison Request Event */
         // The app will receive this event when the IO has DisplayYesNO capability and the peer device IO also has DisplayYesNo capability.
         // show the passkey number to the user to confirm it with the number displayed by peer device.
         ESP_LOGI(TAG, "BLE GAP NC_REQ passkey:%"PRIu32, param->ble_security.key_notif.passkey);
 
-        //配对一致
+        // Pairing consistent
         esp_ble_confirm_reply(param->ble_security.key_notif.bd_addr, true);
         break;
 
@@ -701,16 +701,16 @@ esp_err_t esp_hid_ble_gap_adv_init(uint16_t appearance, const char *device_name)
     //esp_ble_io_cap_t iocap = ESP_IO_CAP_IN;//you have to enter the key on the device
 
 
-    //配置 IO Capability  输入输出能力
+    // Configure IO Capability (Input/Output Capability)
     esp_ble_io_cap_t iocap = ESP_IO_CAP_IO;   //  display  yes/no  capability  
 
     //esp_ble_io_cap_t iocap = ESP_IO_CAP_NONE;//device is not capable of input or output, unsecure
 
-    //initior  key distribute  initatior   向  responder 分发/生成的 密钥
-    uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;            // 加密密钥    身份解析密钥
+    // initiator key distribution: the initiator distributes/generated keys to the responder
+    uint8_t init_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;            // Encryption Key    Identity Resolution Key
 
-    //initior  key distribute  initatior   向  responder 分发/生成的 密钥
-    uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;             // 加密密钥    身份解析密钥
+    // initiator key distribution: the initiator distributes/generated key to the responder
+    uint8_t rsp_key = ESP_BLE_ENC_KEY_MASK | ESP_BLE_ID_KEY_MASK;             // Encryption Key    Identity Resolution Key
     
     
     uint8_t key_size = 16; //the key size should be 7~16 bytes
@@ -1170,7 +1170,7 @@ void ble_init_controller(void)
 esp_err_t esp_hid_gap_init(uint8_t mode)
 {
     esp_err_t ret;
-    //检测设置的模式是否在范围内
+    // Check whether the set mode is within the valid range.
     if (!mode || mode > ESP_BT_MODE_BTDM) 
     {
         ESP_LOGE(TAG, "Invalid mode given!");
@@ -1198,7 +1198,7 @@ esp_err_t esp_hid_gap_init(uint8_t mode)
     }
 
 
-    //初始化  Controller layer and BlueDroid  host  stack and 注册gap事件 Call Back 函数
+    // Initialize the Controller layer and BlueDroid host stack, and register the GAP event callback function.
     ret = init_low_level(mode);
     if (ret != ESP_OK) 
     {

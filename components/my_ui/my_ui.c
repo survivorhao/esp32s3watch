@@ -30,21 +30,21 @@
 
 static const char *TAG="my_ui";
 
-static lv_obj_t *wifi_list = NULL;  // WiFi AP 列表 widget
+static lv_obj_t *wifi_list = NULL;  // WiFi AP List Widget
 
-static lv_obj_t *ui_PasswordScreen = NULL;  // 密码输入屏幕
+static lv_obj_t *ui_PasswordScreen = NULL;  // Password Input Screen
 
-static lv_obj_t *ui_PasswordTextarea = NULL;  // 密码输入框
+static lv_obj_t *ui_PasswordTextarea = NULL;  // Password input field
 
-static lv_obj_t *ui_Keyboard = NULL;  // 键盘
+static lv_obj_t *ui_Keyboard = NULL;  // Keyboard
 
-static lv_obj_t *ui_ConnectButton = NULL;  // Connect 按钮
+static lv_obj_t *ui_ConnectButton = NULL;  // Connect button
 
 static lv_obj_t  *ui_ip_label=NULL;
 
 static lv_obj_t  *ui_ble_pass_label=NULL;
 
-static char current_ssid[33] = {0};  // 临时存储点击的 SSID
+static char current_ssid[33] = {0};  // Temporarily store the clicked SSID
 
 
 
@@ -74,7 +74,7 @@ typedef enum {
     //successfully get weather information
     UI_MSG_WEATHER_RES,
     
-    //wifi连接失败或者断开连接
+    // WiFi connection failed or disconnected
     UI_MSG_WIFI_DISCONNECTED,     
     
     UI_MSG_SD_REFRESH_RES,
@@ -89,10 +89,10 @@ typedef enum {
 } ui_message_type_t;
 
 
-// 定义UI任务的消息结构体
+// Define the message structure for the UI task.
 typedef struct {
     ui_message_type_t type;
-    void *data; // 使用一个通用指针来传递数据
+    void *data; // Use a generic pointer to pass data.
 } ui_message_t;
 
 //ui task message queue
@@ -139,7 +139,7 @@ void my_ui_create_password_screen(void);
 
 static void connect_button_click_cb(lv_event_t *e);
 
-//将时间结构体当前时间转换为格式为 %02d:%02d:%02d字符串方便显示在display上面
+// Convert the current time from the time structure into a string formatted as %02d:%02d:%02d for easy display on the screen.
 void tm_to_string(const struct tm *tm_data, char *buf);
 
 static void ui_weather_change_img(int weather_code, lv_obj_t **obj);
@@ -163,7 +163,7 @@ static void ui_weather_update(weather_data_t data);
 
 void my_ui_task(void *par)
 {
-    // 1. 创建消息队列
+    // 1. Create a message queue
     ui_message_queue = xQueueCreate(10, sizeof(ui_message_t));
     if (ui_message_queue == NULL) 
     {
@@ -214,10 +214,10 @@ void my_ui_task(void *par)
     ui_message_t received_msg;
     while (1) 
     {
-        // 阻塞等待消息
+        // Blocking wait for message
         if (xQueueReceive(ui_message_queue, &received_msg, portMAX_DELAY) == pdTRUE) 
         {
-            // 加锁以安全地调用LVGL API，确保lvgl api thread safe 
+            // Lock to safely call the LVGL API, ensuring the LVGL API is thread-safe.
             if (lvgl_port_lock(0) == true) 
             {
                 
@@ -226,18 +226,18 @@ void my_ui_task(void *par)
                     case UI_MSG_WIFI_START:
                         
                         
-                        // 隐藏ui_wifi_off_image图片
+                        // Hide the ui_wifi_off_image picture.
                         lv_obj_add_flag(ui_WifiOffImage, LV_OBJ_FLAG_HIDDEN);      // Flags
 
-                        // 显示ui_wifi_on_image图片
+                        // Display the ui_wifi_on_image picture.
                         lv_obj_clear_flag(ui_WIfiOnImage, LV_OBJ_FLAG_HIDDEN);     /// Flags
                         break;
                     case UI_MSG_WIFI_STOP:
                         
-                        //隐藏ui_wifi_on_image图片
+                        // Hide the ui_wifi_on_image picture.
                         lv_obj_add_flag(ui_WIfiOnImage, LV_OBJ_FLAG_HIDDEN);      // Flags
 
-                        //显示ui_wifi_off_image图片
+                        // Display the ui_wifi_off_image picture.
                         lv_obj_clear_flag(ui_WifiOffImage, LV_OBJ_FLAG_HIDDEN);     /// Flags
 
                         if(ui_ip_label!=NULL)
@@ -250,7 +250,7 @@ void my_ui_task(void *par)
                         {
                             lv_obj_del_delayed(wifi_list,200);
 
-                            //wifi_list置NULL，下次scan done重新创建
+                            // Set wifi_list to NULL, and recreate it the next time scan is done.
                             wifi_list=NULL;
                         }
 
@@ -265,19 +265,19 @@ void my_ui_task(void *par)
                         if (ap_list == NULL || ap_list->ap_count == 0) 
                         {
                             ESP_LOGW(TAG, "No APs found or invalid data");
-                            // 可选：在 UI 显示 "No WiFi found" 标签
+                            // Optional: Display a "No WiFi found" label in the UI
                             break;
                         }
 
-                        // 创建或更新 list widget（假设 ui_WifiScreen 是 WiFi 屏幕对象）
+                        // Create or update the list widget (assuming ui_WifiScreen is the WiFi screen object)
                         if (wifi_list == NULL) 
                         {
                             
-                            wifi_list = lv_list_create(ui_wifi);        // 创建在 WiFi screen 上
+                            wifi_list = lv_list_create(ui_wifi);        // Created on the WiFi screen
 
-                            lv_obj_set_size(wifi_list, LV_PCT(100), LV_PCT(60));  // 示例大小：全宽，80% 高
+                            lv_obj_set_size(wifi_list, LV_PCT(100), LV_PCT(60));  // Sample size: full width, 80% height
                             
-                            lv_obj_set_align(wifi_list, LV_ALIGN_CENTER);  // 居中
+                            lv_obj_set_align(wifi_list, LV_ALIGN_CENTER);  // Centering
             
                             lv_obj_set_pos(wifi_list,0,55);
 
@@ -288,15 +288,15 @@ void my_ui_task(void *par)
                             
                         }else 
                         {
-                            // 如果 list 已存在，清空旧内容
+                            // If the list already exists, clear the old contents.
                             lv_obj_clean(wifi_list);
                         }
 
-                        // 遍历 ap_records，添加按钮
+                        // Iterate through ap_records and add buttons.
                         for (uint8_t i = 0; i < ap_list->ap_count; i++) 
                         {
-                            // 添加按钮：图标 LV_SYMBOL_WIFI + SSID
-                            // lv_list_add_btn 返回 lv_obj_t * (按钮对象)
+                            // Add button: icon LV_SYMBOL_WIFI + SSID
+                            // lv_list_add_btn returns lv_obj_t * (button object)
                             lv_obj_t *btn = lv_list_add_btn(wifi_list, LV_SYMBOL_WIFI, (const char *)ap_list->ap_records[i].ssid);
                             
                             lv_obj_set_style_bg_color(btn, lv_color_hex(0xffffff), LV_PART_MAIN);  
@@ -304,7 +304,7 @@ void my_ui_task(void *par)
                             
                             if (btn != NULL) 
                             {
-                                // 注册点击事件
+                                // Register click event
                                 lv_obj_add_event_cb(btn, ap_button_click_cb, LV_EVENT_CLICKED, NULL);
                                 
                             }else 
@@ -339,13 +339,13 @@ void my_ui_task(void *par)
 
                         break;
 
-                        //成功get ip之后在删除wifi_list 以及password input screen 
+                        // After successfully getting the IP, delete the wifi_list and the password input screen.
                         case UI_MSG_WIFI_GET_IP:
                             
                             //lv_obj_del api
                             lv_obj_del_delayed(wifi_list,150);
 
-                            //wifi_list置NULL，下次scan done重新创建
+                            // Set wifi_list to NULL, and recreate it the next time scan is done.
                             wifi_list=NULL;
 
                             // after delay some time, then  delete PassWord Screen 
@@ -365,12 +365,13 @@ void my_ui_task(void *par)
                             char *ip_address = (char *)received_msg.data;
                             lv_label_set_text_fmt(ui_ip_label, "IP: %s", ip_address);
                             
-                            // 释放由事件处理器分配的内存
+                            // Release the memory allocated by the event handler.
                             free(ip_address);
                         break;
 
 
-                        //1，初次sntp同步成功，2，在初次同步成功后，本地时间即为正确时间，每秒改变相应控件
+                        // 1. Initial SNTP synchronization successful.  
+2. After the initial synchronization is successful, the local time is considered correct, and the corresponding controls update every second accordingly.
                         case UI_MSG_SNTP_SYNED:
 
                             time_t now;
@@ -378,17 +379,17 @@ void my_ui_task(void *par)
 
                             time(&now);
 
-                            //将时间戳转换为时间结构体
+                            // Convert a timestamp to a time structure.
                             localtime_r(&now, &timeinfo);
                             char time_buff[16];
 
-                            //将时间结构体当前时间转换为格式为 %02d:%02d:%02d字符串方便显示在display上面
+                            // Convert the current time from the time structure into a string formatted as %02d:%02d:%02d for easy display on the screen.
                             tm_to_string(&timeinfo,time_buff);
 
-                            //更改ui clock时间
+                            // Change the UI clock time
                             lv_label_set_text(ui_HourMinuteLabel,time_buff);
 
-                            //改变实时时钟角度
+                            // Change the angle of the real-time clock
                             lv_img_set_angle(ui_second,60*(timeinfo.tm_sec));
                             lv_img_set_angle(ui_min, 60*(timeinfo.tm_min));
                             lv_img_set_angle(ui_hour,300*(timeinfo.tm_hour));
@@ -403,7 +404,7 @@ void my_ui_task(void *par)
                             
                             ui_weather_update(*data); 
 
-                            //释放分配到heap
+                            // Release allocated heap memory
                             free(data);
 
                         break;
@@ -436,14 +437,14 @@ void my_ui_task(void *par)
                                 strcpy(sd_current_dir,res_data->current_path);
                                 
                                 size_t length=strlen(sd_current_dir);
-                                //由于屏幕宽度限制原因，当sd_current_dir字符串长度>=24 byte（不包含'\0'）,就把其拆为两个字符串显示
+                                // Due to screen width limitations, when the length of the sd_current_dir string is >= 24 bytes (excluding the '\0'), it is split into two strings for display.
                                 if(length>=24)
                                 {
                                     char temp_arr[32];
                                     strncpy(temp_arr, sd_current_dir, 24);
-                                    temp_arr[24] = '\0'; // 确保结尾有 '\0'
+                                    temp_arr[24] = '\0'; // Ensure the string is null-terminated with '\0' at the end.
 
-                                    // 剩余部分（从第 24 个字符开始复制）
+                                    // The remaining part (copy starting from the 24th character)
                                     strncpy(branch_sd_current_dir, sd_current_dir + 24, length-24);
                                     branch_sd_current_dir[length-24] = '\0';
                                 
@@ -452,24 +453,24 @@ void my_ui_task(void *par)
                                     lv_label_set_text(branch_path_label,branch_sd_current_dir);
 
                                 }
-                                //长度小于24 byte
+                                // Length less than 24 bytes
                                 else
                                 {
                                     lv_label_set_text(main_path_label,sd_current_dir);
                                     
-                                    //注意这里情况此路径label
+                                    // Note the situation here: this path label
                                     memset(branch_sd_current_dir,'\0',32);
                                     lv_label_set_text(branch_path_label,branch_sd_current_dir);
 
                                 }
                                 lv_obj_clean(file_list);
 
-                                //如果说当前目录里无文件或者目录
+                                // If there are no files or directories in the current directory
                                 if(res_data->item_count ==0)
                                 {
                                     lv_list_add_btn(file_list, LV_SYMBOL_CLOSE, "empty directory");
                                 }
-                                //有内容，遍历显示
+                                // Has content, iterate and display
                                 else 
                                 {
                                     //because limited ram ,so when the numbe of file too much
@@ -558,7 +559,7 @@ void my_ui_task(void *par)
                 }
 
                         
-            // 解锁,确保lvgl api调用的thread safe 
+            // Unlock to ensure thread safety when calling LVGL API functions.
             lvgl_port_unlock();    
             }
             else
@@ -576,7 +577,7 @@ void tm_to_string(const struct tm *tm_data, char *buf)
 {
     if (!tm_data || !buf) return;
 
-    /* %02d 表示不足两位补零 */
+    /* %02d means to pad with zeros if the number is less than two digits. */
     snprintf(buf, 9, "%02d:%02d:%02d",
              tm_data->tm_hour,
              tm_data->tm_min,
@@ -586,7 +587,7 @@ void tm_to_string(const struct tm *tm_data, char *buf)
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
-// 事件处理器：将ESP事件转换为UI任务消息并发送, handler -----> message queue
+// Event handler: Converts ESP events into UI task messages and sends them, handler -----> message queue
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
@@ -618,20 +619,20 @@ static void wifi_stop_handler(void* arg, esp_event_base_t event_base,
 static void wifi_scan_done_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) 
 {
     
-    //  event_data指针指向的heap区域，在退出handler会被回收，这里手动拷贝一份，防止出现wild pointer
+    // The heap area pointed to by the event_data pointer will be reclaimed upon exiting the handler. Here, we manually copy it to prevent a wild pointer from occurring.
     wifi_scan_done_data_t  *cp_data=malloc(sizeof(wifi_scan_done_data_t));
 
     cp_data->ap_count=((wifi_scan_done_data_t *)event_data)->ap_count;
     cp_data->ap_records=((wifi_scan_done_data_t *)event_data)->ap_records;
 
 
-    // 封装消息
+    // Encapsulate Message
     ui_message_t msg;
 
     msg.type = UI_MSG_WIFI_SCAN_DONE;
     msg.data=(void *)cp_data;
     
-    // 发送消息
+    // Send message
     xQueueSend(ui_message_queue, &msg, portMAX_DELAY);
 
     ESP_LOGI(TAG, "Posting wifi scan done  event to UI task queue.");
@@ -642,11 +643,11 @@ static void wifi_scan_done_handler(void* arg, esp_event_base_t event_base, int32
 // WIFI_GET_IP  handler
 static void wifi_get_ip_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) 
 {
-    // 封装消息，传递数据指针
+    // Encapsulate the message and pass the data pointer.
     ui_message_t msg;
     msg.type = UI_MSG_WIFI_GET_IP;
 
-    // 假设event_data是一个指向ip地址字符串的指针，我们拷贝一份数据以确保线程安全
+    // Assuming event_data is a pointer to an IP address string, we make a copy of the data to ensure thread safety.
     char *ip_str = (char*)event_data;
 
     char *send_ip=malloc(strlen(ip_str)+1);
@@ -659,7 +660,7 @@ static void wifi_get_ip_handler(void* arg, esp_event_base_t event_base, int32_t 
     }
     msg.data = send_ip;
     
-    // 发送消息到UI任务队列
+    // Send message to UI task queue
     xQueueSend(ui_message_queue, &msg, portMAX_DELAY);
     // ESP_LOGI(TAG, "Posting get IP event to UI task queue.");
 
@@ -672,7 +673,7 @@ static void sntp_syned_handler(void* arg, esp_event_base_t event_base, int32_t e
     ui_message_t msg;
     msg.type = UI_MSG_SNTP_SYNED;
 
-    // 发送消息到UI任务队列
+    // Send message to UI task queue
     xQueueSend(ui_message_queue, &msg, portMAX_DELAY);
 
 
@@ -685,13 +686,13 @@ static void weather_response_handler(void* arg, esp_event_base_t event_base, int
 {
     ui_message_t msg;
 
-    //天气响应数据
+    // Weather response data
     msg.type= UI_MSG_WEATHER_RES;
 
-    //由于evnet_data 在此handler退出后被释放，因此需要拷贝一份
+    // Since event_data is released after this handler exits, it is necessary to make a copy.
     weather_data_t  *cp_data= malloc( sizeof(weather_data_t));
 
-    //拷贝
+    // Copy
     memcpy(cp_data,(weather_data_t* )event_data, sizeof(weather_data_t));
 
     msg.data=(void *)cp_data;
@@ -711,7 +712,7 @@ static void wifi_disconnected_handler(void* arg, esp_event_base_t event_base, in
     ui_message_t msg;
     msg.type=UI_MSG_WIFI_DISCONNECTED;
     
-    //异常断开连接情况（ap主动关闭/距离太远等事件）
+    // Abnormal disconnection scenarios (e.g., AP actively disconnecting / being out of range, etc.)
     if(event_data !=NULL)
     {
         uint8_t *cpdata=(uint8_t *)heap_caps_malloc(sizeof(uint8_t), MALLOC_CAP_SPIRAM |MALLOC_CAP_8BIT);
@@ -724,7 +725,7 @@ static void wifi_disconnected_handler(void* arg, esp_event_base_t event_base, in
         }
     }
 
-    //正常断开连接（密码错误）
+    // Normal disconnection (incorrect password)
     else
     {
         msg.data=NULL;
@@ -810,7 +811,7 @@ static void ble_connection_close_handler(void* arg, esp_event_base_t event_base,
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
-// 自定义Ui 以及给ui widget添加的事件回调函数
+// Custom UI and adding event callback functions to UI widgets
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
@@ -818,13 +819,13 @@ static void ble_connection_close_handler(void* arg, esp_event_base_t event_base,
 
 static void ap_button_click_cb(lv_event_t *e) 
 {
-    lv_obj_t *button = lv_event_get_target(e);  // 获取被点击的按钮
-    const char *ssid_text = lv_list_get_btn_text(wifi_list,button);  // 获取按钮文本（SSID）
+    lv_obj_t *button = lv_event_get_target(e);  // Get the clicked button
+    const char *ssid_text = lv_list_get_btn_text(wifi_list,button);  // Get button text (SSID)
     
     if (ssid_text != NULL) 
     {
         ESP_LOGI(TAG, "Clicked AP button with text: %s", ssid_text);
-        strncpy(current_ssid, ssid_text, sizeof(current_ssid) - 1);  // 存储 SSID
+        strncpy(current_ssid, ssid_text, sizeof(current_ssid) - 1);  // Store SSID
 
 
     } else 
@@ -840,32 +841,32 @@ static void ap_button_click_cb(lv_event_t *e)
 }
 
 
-// 创建密码输入页面
+// Create password input page
 void my_ui_create_password_screen(void) 
 {
     ui_PasswordScreen = lv_obj_create(NULL);  
     lv_obj_set_style_bg_color(ui_PasswordScreen, lv_color_hex(0xffffff), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(ui_PasswordScreen, 255, LV_PART_MAIN);
 
-    // 创建密码输入框 (textarea)
+    // Create a password input box (textarea)
     ui_PasswordTextarea = lv_textarea_create(ui_PasswordScreen);
-    lv_obj_set_size(ui_PasswordTextarea, LV_PCT(100), 180);  // 示例大小
-    lv_obj_align(ui_PasswordTextarea, LV_ALIGN_TOP_MID, 0, 0);  // 上方居中
+    lv_obj_set_size(ui_PasswordTextarea, LV_PCT(100), 180);  // Sample size
+    lv_obj_align(ui_PasswordTextarea, LV_ALIGN_TOP_MID, 0, 0);  // Top Centered
     lv_textarea_set_placeholder_text(ui_PasswordTextarea, "Enter Password");
-    lv_textarea_set_one_line(ui_PasswordTextarea, true);  // 单行
-    lv_textarea_set_password_mode(ui_PasswordTextarea, false);  // 密码模式（* 显示）
+    lv_textarea_set_one_line(ui_PasswordTextarea, true);  // Single line
+    lv_textarea_set_password_mode(ui_PasswordTextarea, false);  // Password mode (* displayed)
     
-    // 创建键盘
+    // Create keyboard
     ui_Keyboard = lv_keyboard_create(ui_PasswordScreen);
-    lv_obj_set_size(ui_Keyboard, LV_PCT(100), LV_PCT(60));  // 下半屏
+    lv_obj_set_size(ui_Keyboard, LV_PCT(100), LV_PCT(60));  // Bottom half of the screen
     lv_obj_align(ui_Keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_keyboard_set_textarea(ui_Keyboard, ui_PasswordTextarea);  // 绑定到 textarea
+    lv_keyboard_set_textarea(ui_Keyboard, ui_PasswordTextarea);  // Bind to textarea
     
-    // 创建 Connect 按钮
+    // Create Connect button
     ui_ConnectButton = lv_btn_create(ui_PasswordScreen);
     lv_obj_set_size(ui_ConnectButton, 100, 40);
     lv_obj_align_to(ui_ConnectButton, ui_PasswordTextarea, LV_ALIGN_OUT_BOTTOM_MID, 0, 20);
-    lv_obj_add_event_cb(ui_ConnectButton, connect_button_click_cb, LV_EVENT_CLICKED, NULL);  // 注册回调
+    lv_obj_add_event_cb(ui_ConnectButton, connect_button_click_cb, LV_EVENT_CLICKED, NULL);  // Register callback
     
     lv_obj_t *label = lv_label_create(ui_ConnectButton);
     lv_label_set_text(label, "Connect");
@@ -874,22 +875,22 @@ void my_ui_create_password_screen(void)
 
 
 
-// Connect 按钮点击回调：发送连接请求事件
+// Connect button click callback: send connection request event
 static void connect_button_click_cb(lv_event_t *e) 
 {
     const char *password = lv_textarea_get_text(ui_PasswordTextarea);
     if (password == NULL || strlen(password) == 0) 
     {
         ESP_LOGW(TAG, "Empty password, ignoring connect");
-        return;  // 可选：显示错误提示
+        return;  // Optional: Display error message
     }
     
-    // 创建事件数据
+    // Create event data
     wifi_connect_data_t data;
     strncpy(data.ssid, current_ssid, sizeof(data.ssid) - 1);
     strncpy(data.password, password, sizeof(data.password) - 1);
     
-    // 发送事件到 UI event loop（WiFi 组件会订阅）
+    // Send events to the UI event loop (subscribed by the WiFi component)
     esp_err_t ret = esp_event_post_to(ui_event_loop_handle, APP_EVENT, APP_WIFI_CONNECT_REQUEST, &data, sizeof(data), portMAX_DELAY);
     if (ret == ESP_OK) 
     {
@@ -905,20 +906,20 @@ static void connect_button_click_cb(lv_event_t *e)
 }
 
 
-/// @brief 更新weather screen的天气
-/// @param data 获得的天气数据
+// / @brief Update the weather on the weather screen
+// / @param data The obtained weather data
 static void ui_weather_update(weather_data_t data) 
 {
-    //天气字符串
+    // Weather string
     lv_label_set_text(ui_TodayWeather, data.today_weather);
 
-    //地址
+    // Address
     lv_label_set_text(ui_WeatherPosition, data.location);
 
-    //温度
+    // Temperature
     lv_label_set_text(ui_Temperature, data.today_tem);
 
-    //设置三天天气范围
+    // Set a three-day weather range
     lv_label_set_text(ui_day1Label, data._3day_tem_range[0]);
     lv_label_set_text(ui_day2Label, data._3day_tem_range[1]);
     lv_label_set_text(ui_day3Label, data._3day_tem_range[2]);
@@ -932,14 +933,14 @@ static void ui_weather_update(weather_data_t data)
 
 
 }
-/// @brief 根据http server返回的weather code改变相应的图片,具体请参考https://seniverse.yuque.com/hyper_data/api_v3/yev2c3
+// / @brief Change the corresponding image based on the weather code returned by the HTTP server. For details, please refer to https://seniverse.yuque.com/hyper_data/api_v3/yev2c3
 /// @param weather_code     
-/// @param obj  要改变的image wideget 对象的地址
+// / @param obj  The address of the image widget object to be modified
 static void ui_weather_change_img(int weather_code, lv_obj_t **obj)
 {
     switch(weather_code)
     {
-        //0-3同一情况均为sunny
+        // 0-3 are all sunny under the same conditions.
         case 0:
         case 1:
         case 2:
@@ -952,7 +953,7 @@ static void ui_weather_change_img(int weather_code, lv_obj_t **obj)
             lv_img_set_src(*obj,&ui_img_cloudyimage1_png);
         break;
 
-        //5-8同一情况均为Partly Cloudy
+        // 5-8: The same condition applies, all are Partly Cloudy.
         case 5:
         case 6:
         case 7:
@@ -972,7 +973,7 @@ static void ui_weather_change_img(int weather_code, lv_obj_t **obj)
             lv_img_set_src(*obj,&ui_img_moderaterainimage_png);
         break;
 
-        //15-18同一情况均为Heavy Rain
+        // Lines 15-18 all represent the same situation: Heavy Rain.
         case 15:
         case 16:
         case 17:

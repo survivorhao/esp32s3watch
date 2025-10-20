@@ -6,4 +6,9 @@
 
 
 
+/**
+ * @brief A brief description of the my_ui_task function.
+ *
+ * @param par Description of the par parameter.
+ */
 void my_ui_task(void *par);
