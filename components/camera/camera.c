@@ -166,14 +166,14 @@ esp_err_t  bsp_camera_init(void)
  */
 void bsp_camera_deinit(void)
 {
-    camera_dvp_pwdn_set(1); // 关闭power线，关闭摄像头
-    esp_camera_deinit();
+    camera_dvp_pwdn_set(1); // power down camera
+    esp_camera_deinit();    
 
-    //先删除生成帧数据任务，再删除刷新任务
+    //First, delete the task of generating frame data, then delete the refresh task
     vTaskDelete(process_camera_handle);
     vTaskDelete(process_lcd_handle);
 
-    //释放buff
+    //free dynamic buffer
     heap_caps_free(frame_out_buf[0]);
     heap_caps_free(frame_out_buf[1]);
     frame_out_buf[0]=NULL;
@@ -183,7 +183,7 @@ void bsp_camera_deinit(void)
     in_image.data=NULL;
 
 
-    //删除队列
+    //delete frame queue
     vQueueDelete(xQueueLCDFrame);
     vQueueDelete(g_Camera_event_queue);
     xQueueLCDFrame=NULL;
@@ -197,7 +197,7 @@ void bsp_camera_deinit(void)
     frame_buf_sem[1]=NULL;
 
 
-    //保存当前帧序号
+    //Save the current frame number
     nvs_handle_t handle;
     esp_err_t err = nvs_open("user", NVS_READWRITE, &handle);
     if (err != ESP_OK) 
@@ -261,7 +261,6 @@ static void task_process_lcd(void *arg)
         if (xQueueReceive(xQueueLCDFrame, &buf_info, portMAX_DELAY)) 
         {
             // ESP_LOGI(TAG,"receive queuelcd frame success,sending .. ");
-            // 绘制
 
             if(lvgl_port_lock(0)==true)
             {
@@ -285,7 +284,7 @@ static void task_process_lcd(void *arg)
                     case CAMER_CMD_STORE:
  
                         ESP_LOGI(TAG,"receieve store command ");
-                        //保存当前帧
+                        //save current frame to sdcard
                         save_frame_to_bmp((const char *)buf_info.data);
 
                         break;
@@ -295,7 +294,8 @@ static void task_process_lcd(void *arg)
                 }
             }
         
-            //刷新/保存当前帧之后再释放信号量，防止出现竞争情况
+            //Release the semaphore after refreshing/saving the current frame 
+            //to prevent race conditions
             if(xSemaphoreGive(frame_buf_sem[buf_info.buf_index])!=pdTRUE)
             {
                 ESP_LOGE(TAG," give fram_buf_sem fail ");
