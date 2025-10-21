@@ -1,4 +1,5 @@
-# ESP32-S3 智能手表
+
+[English Version](/README.md)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![ESP-IDF 版本](https://img.shields.io/badge/ESP--IDF-release%2Fv5.4.2-green.svg)](https://github.com/espressif/esp-idf)
@@ -8,7 +9,7 @@
 本项目是一个基于 ESP32-S3 微控制器的开源智能手表开发项目。使用 ESP-IDF 框架（release/v5.4.2 版本），开发板为 LCSC-boards LCKFB-SZPI-ESP32-S3-VA（可从 [LCSC](https://www.lcsc.com/) 或 [SZLCSC](https://www.szlcsc.com/) 获取）。图形用户界面 (GUI) 采用 LVGL 实现平滑渲染和交互。
 
 架构强调模块化和可扩展性：
-- 使用 ESP 事件循环实现组件解耦，采用发布者/订阅者模型。发布者无需关心订阅者，反之亦然。
+- 使用 ESP event loop 实现组件解耦，采用发布者/订阅者模型。发布者无需关心订阅者，反之亦然。
 - 使用单一 LVGL 任务确保 LVGL API 的线程安全，通过消息队列处理 UI 请求。
 
 ## 功能
@@ -24,7 +25,7 @@
 
 ## 注意事项
 
-- **SD 卡浏览**：如果目录文件过多，不会全部列出，因为 LVGL 部件内存分配受内部 SRAM 限制，可能导致崩溃。
+- **SD 卡浏览**：如果目录文件过多，不会全部列出，因为 LVGL 部件内存分配受内部 SRAM 限制，可能导致崩溃。SD 卡文件浏览仅支持显示 BMP 格式图片，颜色深度 16/24/32 位均支持，解码后的图片存放在 PSRAM 中，显示完即回收，无需担心 RAM 占用问题。
 - **资源限制**：由于 ESP32-S3 内部 RAM 限制，WiFi、BLE 和摄像头无法同时使用。代码已强制限制。
 - LVGL 使用 8.3.11 版本，如需升级到 LVGL 9 版本，请自行解决版本不兼容问题。
 - 在 `/main/idf_component.yml` 文件中声明了对于其他组件的依赖，会在执行 IDF 命令时自动从 [https://components.espressif.com](https://components.espressif.com) 下载，擅自修改可能会导致不兼容问题，请慎重。
@@ -57,6 +58,8 @@
 - **ESP-IDF 官方文档**：  
   [ESP-IDF for ESP32-S3 (v5.4)](https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.4/esp32s3/index.html)  
   [Espressif Components Registry](https://components.espressif.com/)
+- **心知天气 API**：  
+  [https://seniverse.yuque.com/hyper_data/api_v3](https://seniverse.yuque.com/hyper_data/api_v3)
 
 ## 安装
 
@@ -64,8 +67,8 @@
 
 1. 克隆仓库：  
    ```
-   git clone https://github.com/yourusername/esp32s3-smart-watch.git
-   cd esp32s3-smart-watch
+   git clone https://github.com/survivorhao/esp32s3watch.git
+   cd esp32s3watch
    ```
 
 2. 配置：  
