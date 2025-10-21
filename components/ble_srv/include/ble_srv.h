@@ -10,7 +10,7 @@
 
 
 /**
- * @brief A brief description of the ble_register_srv_handler function.
+ * @brief register ble relevant handler
  *
  */
 void ble_register_srv_handler(void);

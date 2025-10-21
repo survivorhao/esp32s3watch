@@ -39,10 +39,6 @@ sdmmc_card_t *card;
 
 #define     EXAMPLE_MAX_CHAR_SIZE    64
 
-#define     SD_CMD_PIN                 GPIO_NUM_48
-#define     SD_CLK_PIN                 GPIO_NUM_47
-#define     SD_DATA0_PIN               GPIO_NUM_21
-
 #define     MOUNT_POINT                "/sdcard"
 
 #define     SD_PIC_DIR                 "/sdcard/pic/"
@@ -135,6 +131,17 @@ void delete_all_in_dir(const char *path);
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
+/**
+ * @brief Write a null-terminated string to a file on the filesystem.
+ *
+ * Opens the file at @p path for writing and writes the contents of @p data
+ * into it. The function logs progress and returns an error code if the
+ * file cannot be opened or written.
+ *
+ * @param path Path to the file to write (null-terminated C string).
+ * @param data Null-terminated string to write into the file.
+ * @return ESP_OK on success, ESP_FAIL on error.
+ */
 static esp_err_t s_example_write_file(const char *path, char *data)
 {
     ESP_LOGI(TAG, "Opening file %s", path);
@@ -155,6 +162,16 @@ static esp_err_t s_example_write_file(const char *path, char *data)
     读出指定path路径下的内容
 
 */
+/**
+ * @brief Read the first line from a text file and log it.
+ *
+ * Opens the file at @p path, reads a single line up to a fixed buffer size,
+ * strips the trailing newline and logs the content. Intended as a simple
+ * example helper for reading small text files.
+ *
+ * @param path Path to the file to read (null-terminated C string).
+ * @return ESP_OK on success, ESP_FAIL if the file couldn't be opened or read.
+ */
 static esp_err_t s_example_read_file(const char *path)
 {
     ESP_LOGI(TAG, "Reading file %s", path);
@@ -179,11 +196,19 @@ static esp_err_t s_example_read_file(const char *path)
 }
 
 
-/*
-    初始化sd卡底层驱动函数并且挂载 fat 文件系统
 
-
-*/
+/**
+ * @brief Initialize SDMMC host, mount FAT filesystem and register handlers.
+ *
+ * Initializes the SDMMC host and slot configuration for a 1-line SD
+ * interface, mounts the FAT filesystem at MOUNT_POINT (formatting it if
+ * necessary), prints card info and registers event handlers for file
+ * refresh and camera picture deletion.
+ *
+ * This function sets the global @c sd_mount_success flag when mounting
+ * succeeds and populates the global @c card pointer with the detected
+ * card information.
+ */
 void sdcard_init_mount_fs(void)
 {
     esp_err_t ret;
@@ -276,6 +301,15 @@ void sdcard_init_mount_fs(void)
 }
 
 
+/**
+ * @brief Log the contents of a directory.
+ *
+ * Opens the directory at @p path and prints each entry's name and type
+ * (file or directory) to stdout. Errors are logged if the directory
+ * cannot be opened.
+ *
+ * @param path Path to directory to enumerate.
+ */
 void list_dir(const char *path)
 {
     ESP_LOGI(TAG, "Listing files in %s:", path);
@@ -304,7 +338,19 @@ void list_dir(const char *path)
 
 
 
-// RGB888 to RGB565 Conversion (Ignoring Alpha for 32-bit)
+
+/**
+ * @brief Convert 24-bit RGB888 color values to 16-bit RGB565 format.
+ *
+ * Performs bit truncation from 8 bits per channel to the RGB565 layout and
+ * returns the resulting 16-bit value with bytes swapped to match the
+ * display's expected endianness.
+ *
+ * @param r Red component (0-255).
+ * @param g Green component (0-255).
+ * @param b Blue component (0-255).
+ * @return 16-bit RGB565 color value (byte-swapped as required by display).
+ */
 static uint16_t rgb888_to_565(uint8_t r, uint8_t g, uint8_t b) 
 {   
     volatile uint16_t data=((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);   
@@ -315,6 +361,18 @@ static uint16_t rgb888_to_565(uint8_t r, uint8_t g, uint8_t b)
 
 
 
+/**
+ * @brief Read a BMP file from the SD card and display it via LVGL.
+ *
+ * Supports BMP files with 40-byte (BITMAPINFOHEADER) or 124-byte (V5)
+ * DIB headers and 16/24/32 bits per pixel (no compression). Allocates a
+ * PSRAM-backed buffer for the converted RGB565 image and creates an LVGL
+ * image descriptor to display the image on the screen.
+ *
+ * @param file_path Path to the BMP file (on the mounted SD card).
+ * @return ESP_OK on success, ESP_FAIL on error (file open/read/unsupported
+ *         format or allocation failure).
+ */
 static esp_err_t read_bmp_and_display(const char *file_path) 
 {
     FILE *f = fopen(file_path, "rb");
@@ -496,7 +554,6 @@ static esp_err_t read_bmp_and_display(const char *file_path)
                 uint8_t b = src_ptr[x * 4 + 0];
                 uint8_t g = src_ptr[x * 4 + 1];
                 uint8_t r = src_ptr[x * 4 + 2];
-                // uint8_t a = src_ptr[x * 4 + 3];  // Ignore
                 dest_ptr[x] = rgb888_to_565(r, g, b);
             }
         }
@@ -537,9 +594,24 @@ static esp_err_t read_bmp_and_display(const char *file_path)
 
 
 
+/**
+ * @brief Event handler for file list refresh requests.
+ *
+ * This handler responds to APP_FILE_REFRESH_REQUEST events. If the SD card
+ * is not mounted, it posts a response indicating the error. If the request
+ * targets a directory it enumerates the directory contents and posts the
+ * results (APP_FILE_REFRESH_RESPONSE). If the request targets a BMP file,
+ * the BMP is loaded and displayed.
+ *
+ * @param arg Handler argument (unused).
+ * @param event_base The event base the event was posted to (APP_EVENT).
+ * @param event_id Event identifier (e.g. APP_FILE_REFRESH_REQUEST).
+ * @param event_data Pointer to a file_refresh_req_data_t describing the
+ *                   requested path and options.
+ */
 static void user_sd_refresh_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
-{
 
+{
     if(!sd_mount_success)
     {
         // If the SD card is not mounted, directly return an error.
@@ -666,6 +738,18 @@ static void user_sd_refresh_handler(void *arg, esp_event_base_t event_base, int3
 }
 
 
+/**
+ * @brief Event handler to delete saved camera pictures.
+ *
+ * When invoked this handler removes all files under the directory
+ * specified by CAMERA_SAVED_PIC_PATH. If the SD card is not mounted the
+ * handler returns immediately.
+ *
+ * @param arg Handler argument (unused).
+ * @param event_base The event base the event was posted to (APP_EVENT).
+ * @param event_id Event identifier (e.g. APP_CAMERA_PIC_DELETE).
+ * @param event_data Event-specific data (unused).
+ */
 static void user_camera_pic_delete_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     //sdcard haven't mount
@@ -679,6 +763,15 @@ static void user_camera_pic_delete_handler(void *arg, esp_event_base_t event_bas
 
 }
 
+/**
+ * @brief Recursively delete all files and subdirectories under a path.
+ *
+ * Walks the directory tree rooted at @p path and deletes all regular files
+ * and recursively removes subdirectories. This function logs errors but is
+ * primarily intended for cleanup operations (e.g. clearing saved pictures).
+ *
+ * @param path Root directory path to delete contents from.
+ */
 void delete_all_in_dir(const char *path)
 {
     DIR *dir = opendir(path);

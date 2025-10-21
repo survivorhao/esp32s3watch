@@ -58,10 +58,13 @@ static void IRAM_ATTR gpio_isr_handler(void* arg);
 i2c_master_bus_handle_t     I2C_Master_bus_handle;
 i2c_master_dev_handle_t     I2C_Master_io_extend_dev_handle;
 
-/*
-    @desc: 初始化硬件i2c0 (只能适应新版本，基于旧版本的驱动的应用层开发不可调用)
 
-*/
+/**
+ * @brief Initialize the I2C master bus and add the IO extender device.
+ *
+ * Sets up the I2C bus (I2C_NUM_0) and registers the IO extender device on
+ * the bus. This is the new-version I2C initialization used by the board.
+ */
 void   bsp_i2c_driver_init(void)
 {
 
@@ -101,6 +104,15 @@ esp_lcd_touch_handle_t      tp_handle;                  // Touchscreen handle
 
 
 
+/**
+ * @brief Initialize and configure the LCD panel and associated SPI bus.
+ *
+ * Initializes SPI bus, installs panel IO, creates the ST7789 panel driver,
+ * performs panel reset and basic configuration. Returns an esp_err_t to
+ * indicate success or failure.
+ *
+ * @return ESP_OK on success, or an error code on failure.
+ */
 // LCD screen initialization
 esp_err_t bsp_display_new(void)
 {
@@ -165,6 +177,12 @@ err:
 
 
 
+/**
+ * @brief Initialize PWM (LEDC) for LCD backlight control.
+ *
+ * Configures LEDC timer and channel used to drive the LCD backlight via PWM.
+ * @return ESP_OK on success, or an error code on failure.
+ */
 // Backlight PWM Initialization
 esp_err_t bsp_display_brightness_init(void)
 {
@@ -194,6 +212,15 @@ esp_err_t bsp_display_brightness_init(void)
     return ESP_OK;
 }
 
+/**
+ * @brief Set the LCD backlight brightness.
+ *
+ * Converts a percentage (0-100) to the LEDC duty cycle and updates the
+ * PWM output driving the backlight.
+ *
+ * @param brightness_percent Brightness as percentage (0-100).
+ * @return ESP_OK on success, or an error code on failure.
+ */
 // Backlight Brightness Setting
 esp_err_t bsp_display_brightness_set(int brightness_percent)
 {
@@ -213,12 +240,24 @@ esp_err_t bsp_display_brightness_set(int brightness_percent)
     return ESP_OK;
 }
 
+/**
+ * @brief Turn off the display backlight.
+ *
+ * Convenience wrapper that sets backlight brightness to 0%.
+ * @return ESP_OK on success.
+ */
 // Turn off the backlight
 esp_err_t bsp_display_backlight_off(void)
 {
     return bsp_display_brightness_set(0);
 }
 
+/**
+ * @brief Turn on the display backlight at maximum brightness.
+ *
+ * Convenience wrapper that sets backlight brightness to 100%.
+ * @return ESP_OK on success.
+ */
 // Turn on the backlight to the brightest setting.
 esp_err_t bsp_display_backlight_on(void)
 {
@@ -226,6 +265,18 @@ esp_err_t bsp_display_backlight_on(void)
 }
 
 
+/**
+ * @brief Fill a rectangular region of the LCD with a single RGB color.
+ *
+ * Allocates a temporary buffer for one row and writes the provided color
+ * to each pixel in the rectangle bounded by (x_start,y_start)-(x_end,y_end).
+ *
+ * @param x_start Left coordinate of the rectangle.
+ * @param y_start Top coordinate of the rectangle.
+ * @param x_end Right coordinate of the rectangle (exclusive/end).
+ * @param y_end Bottom coordinate of the rectangle (exclusive/end).
+ * @param rgb_color 16-bit RGB color value.
+ */
 // Set the LCD screen color
 void lcd_set_color(int x_start, int y_start, int x_end, int y_end, uint16_t rgb_color)
 {
@@ -257,6 +308,18 @@ void lcd_set_color(int x_start, int y_start, int x_end, int y_end, uint16_t rgb_
 
 
 
+/**
+ * @brief Draw an image to the LCD panel.
+ *
+ * Copies image pixel data into a heap-allocated buffer and draws it to the
+ * specified rectangle on the display.
+ *
+ * @param x_start Left coordinate of the destination rectangle.
+ * @param y_start Top coordinate of the destination rectangle.
+ * @param x_end Right coordinate of the destination rectangle.
+ * @param y_end Bottom coordinate of the destination rectangle.
+ * @param gImage Pointer to image data to be drawn (byte-packed).
+ */
 void lcd_draw_pictrue(int x_start, int y_start, int x_end, int y_end, const unsigned char *gImage)
 {
     
@@ -287,6 +350,12 @@ void lcd_draw_pictrue(int x_start, int y_start, int x_end, int y_end, const unsi
 esp_lcd_touch_handle_t      tp_handle;                  // Touchscreen handle
 esp_lcd_panel_io_handle_t   tp_io_handle;
 
+/**
+ * @brief Initialize the touch controller and create touch IO handle.
+ *
+ * Creates the panel IO for I2C touch controller and instantiates the
+ * ft5x06 touch driver with configured geometry and flags.
+ */
 void  bsp_touch_new(void)
 {
     ESP_LOGI(TAG,"begin to init tft touch ");
@@ -321,6 +390,14 @@ void  bsp_touch_new(void)
 }
 
 
+/**
+ * @brief Task function that polls touch controller and reports coordinates.
+ *
+ * Intended to run as a FreeRTOS task; periodically reads touch data and
+ * logs coordinates when a touch is detected.
+ *
+ * @param par Unused parameter pointer passed by the task create API.
+ */
 void tft_touch_read_data(void* par)
 {
     uint16_t touch_x[1];
@@ -357,6 +434,14 @@ lv_display_t *lvgl_disp= NULL;
 static lv_indev_t *lvgl_touch_indev = NULL;
 
 
+/**
+ * @brief Initialize LVGL, register display and touch drivers.
+ *
+ * Sets up LVGL port, registers the display driver and touch input driver
+ * and performs required display initialization steps.
+ *
+ * @return ESP_OK on success or an error code on failure.
+ */
 esp_err_t app_lvgl_init(void)
 {
     //initialize lcd display , ledc (to control the lcd light), spi (to driver the lcd )
@@ -429,6 +514,13 @@ esp_err_t app_lvgl_init(void)
 
 
 
+/**
+ * @brief Configure the user button GPIO and install ISR.
+ *
+ * Configures GPIO0 as input with pull-up and attaches an ISR to handle
+ * button presses. ISR either queues a camera store command or enters
+ * deep sleep if the camera queue is not present.
+ */
 void bsp_button_init(void)
 {
     gpio_config_t gpio_conf = {
@@ -451,6 +543,14 @@ void bsp_button_init(void)
 
 
 
+/**
+ * @brief GPIO interrupt service routine for the user button (GPIO0).
+ *
+ * If the camera event queue exists, this ISR posts a store command. If
+ * not, it configures an ext0 wakeup and enters deep sleep.
+ *
+ * @param arg GPIO number passed as the ISR argument.
+ */
 static void IRAM_ATTR gpio_isr_handler(void* arg)
 {
     uint32_t io_num=(int)arg;

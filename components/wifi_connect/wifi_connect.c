@@ -67,8 +67,16 @@ static void user_wifi_connect_request_handler(void* arg, esp_event_base_t event_
 //----------------------------------------------------------------------------------------------------------------------------
 
 
-/// @brief wifi task 
-/// @param pvParameters 
+/**
+ * @brief WiFi management task entry point.
+ *
+ * Creates the WiFi mutex, initializes the default event loop and network
+ * interface, registers system and IP event handlers, and registers UI event
+ * handlers for scan, connect and close requests. This task sets up the
+ * asynchronous event-driven WiFi control used by the application.
+ *
+ * @param Par Unused task parameter.
+ */
 void wifi_task(void *Par) 
 {
     // Initialize mutex
@@ -105,11 +113,20 @@ void wifi_task(void *Par)
 }
 
 
-// / @brief  Handles WiFi events dispatched by the default event loop
-/// @param arg 
-/// @param event_base 
-/// @param event_id 
-/// @param event_data 
+/**
+ * @brief System event handler for WiFi and IP events.
+ *
+ * Handles asynchronous WiFi and IP events dispatched by the ESP event loop
+ * (e.g. STA start/stop, scan completion, connection, disconnection and
+ * IP acquisition). This function updates the global @c current_wifi_state,
+ * posts UI events for scan results or disconnection notifications, and
+ * performs cleanup when WiFi is stopped as part of deinitialization.
+ *
+ * @param arg Handler argument (unused).
+ * @param event_base Event base (WIFI_EVENT or IP_EVENT).
+ * @param event_id Event identifier describing the specific event.
+ * @param event_data Event-specific data pointer (type varies by event).
+ */
 static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
                                int32_t event_id, void* event_data) 
 {
@@ -275,6 +292,19 @@ static void wifi_system_event_handler(void* arg, esp_event_base_t event_base,
 
 }
 
+/**
+ * @brief UI event handler to start WiFi scanning or initialize WiFi.
+ *
+ * Responds to APP_WIFI_SCAN_START events posted by the UI. Depending on the
+ * current WiFi state, this handler may initialize and start the WiFi stack,
+ * begin an active scan, or ignore duplicate requests. State transitions are
+ * protected by @c wifi_mutex.
+ *
+ * @param arg Unused handler argument.
+ * @param event_base Event base (APP_EVENT).
+ * @param event_id Event identifier (APP_WIFI_SCAN_START).
+ * @param event_data Event-specific data (unused).
+ */
 // User requests scan
 static void  user_wifi_start_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) 
 {
@@ -341,11 +371,19 @@ static void  user_wifi_start_handler(void* arg, esp_event_base_t event_base, int
 
 
 
-// / @brief Turn off WiFi and release the corresponding resources
-/// @param arg 
-/// @param event_base 
-/// @param event_id 
-/// @param event_data 
+/**
+ * @brief UI event handler to stop WiFi and deinitialize resources.
+ *
+ * Handles APP_WIFI_CLOSE events by transitioning state to CLOSING and
+ * calling esp_wifi_stop() (asynchronous). The actual deinitialization is
+ * completed in the WIFI_EVENT_STA_STOP handler in @c wifi_system_event_handler.
+ *
+ * @param arg Unused handler argument.
+ * @param event_base Event base (APP_EVENT).
+ * @param event_id Event identifier (APP_WIFI_CLOSE).
+ * @param event_data Event-specific data (unused).
+ */
+// User requests close
 static void user_wifi_close_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) 
 {
     ESP_LOGI(TAG, "Received  WIFI_CLOSE event");
@@ -379,6 +417,19 @@ static void user_wifi_close_handler(void* arg, esp_event_base_t event_base, int3
 
 
 
+/**
+ * @brief UI event handler to initiate a WiFi station connection.
+ *
+ * Expects @p event_data to point to a wifi_connect_data_t containing SSID
+ * and password. Configures the STA interface and calls esp_wifi_connect()
+ * asynchronously. This handler is effective only when WiFi is in the
+ * IDLE state; otherwise the request is ignored.
+ *
+ * @param arg Unused handler argument.
+ * @param event_base Event base (APP_EVENT).
+ * @param event_id Event identifier (APP_WIFI_CONNECT_REQUEST).
+ * @param event_data Pointer to wifi_connect_data_t with connection info.
+ */
 // User requests connection
 static void user_wifi_connect_request_handler(void* arg, esp_event_base_t event_base,
                                            int32_t event_id, void* event_data) 

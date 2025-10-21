@@ -75,20 +75,36 @@ void parse_today_weather_json(const char *json_str);
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
 
+
+/**
+ * @brief Register weather-related event handlers with the UI event loop.
+ *
+ * Registers handlers for weather request and weather position change events
+ * so the application can trigger weather queries and update the configured
+ * location.
+ */
 void weather_register_weathe_service_handler(void)
 {
     // Register SNTP request handler
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_WEATHER_REQUEST, user_weather_srv_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, APP_WEATHER_POSITION_CHANGE, user_weather_pos_change_handler, NULL)); 
 
+
 }
 
-
-/// @brief 
-/// @param arg 
-/// @param event_base 
-/// @param event_id 
-/// @param event_data 
+/**
+ * @brief Handle APP_WEATHER_REQUEST events to fetch current and multi-day weather.
+ *
+ * This handler validates WiFi connectivity, rate-limits requests, constructs
+ * the HTTP URLs for current and multi-day forecasts, performs HTTPS GET
+ * requests using the esp_http_client, parses the JSON responses, and posts
+ * an APP_WEATHER_RESPONSE event with parsed weather data.
+ *
+ * @param arg Unused handler argument.
+ * @param event_base Event base (APP_EVENT).
+ * @param event_id Event identifier (APP_WEATHER_REQUEST).
+ * @param event_data Pointer to any event-specific data (unused).
+ */
 static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     if (current_wifi_state != WIFI_STATE_GETIP)
@@ -178,15 +194,7 @@ static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int
     // Close the HTTP connection
     esp_http_client_cleanup(client);
 
-    // printf("\n location %s ,today_tem %s ,today_weather %s, wea code %d ",today_weather.location, today_weather.today_tem, today_weather.today_weather,today_weather.today_weather_code);
-
-    // for(uint8_t i=0; i<3 ;i++)
-    // {
-    //     printf(" day %d, tem range %s ,wea code %d \n",i, today_weather._3day_tem_range[i], today_weather._3day_weather[i]);
-        
-    // }
-
-
+    //send weather response date
     esp_event_post_to(ui_event_loop_handle,APP_EVENT,APP_WEATHER_RESPONSE, &today_weather,sizeof(today_weather),portMAX_DELAY);
 
     free(weather_response_buffer);
@@ -194,7 +202,18 @@ static void user_weather_srv_handler(void *arg, esp_event_base_t event_base, int
 
 
 }
-
+/**
+ * @brief Handle weather position change events.
+ *
+ * Updates the internally constructed weather query URLs based on the global
+ * `weather_position` string and logs the new position. This function is
+ * invoked when APP_WEATHER_POSITION_CHANGE is posted.
+ *
+ * @param arg Unused handler argument.
+ * @param event_base Event base (APP_EVENT).
+ * @param event_id Event identifier (APP_WEATHER_POSITION_CHANGE).
+ * @param event_data Event-specific data (unused).
+ */
 static void user_weather_pos_change_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
 
@@ -209,6 +228,17 @@ static void user_weather_pos_change_handler(void *arg, esp_event_base_t event_ba
 
 
 
+/**
+ * @brief HTTP event handler used by esp_http_client for weather requests.
+ *
+ * Handles HTTP lifecycle events (connect, headers, data chunks, finish,
+ * disconnect and redirect) and accumulates response data into either the
+ * user-provided buffer or an internally allocated buffer. This handler
+ * supports non-chunked responses and frees internal buffers on finish.
+ *
+ * @param evt Pointer to the esp_http_client_event_t describing the event.
+ * @return ESP_OK on success, or ESP_FAIL on allocation/read errors.
+ */
 esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 {
     
@@ -326,6 +356,15 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 
 
 
+/**
+ * @brief Parse JSON response for current weather and populate global data.
+ *
+ * Parses the JSON string returned by the weather API for current conditions,
+ * extracts the location name, textual weather description, temperature and
+ * weather code, and stores them into the global `today_weather` structure.
+ *
+ * @param json_str Null-terminated JSON string containing the API response.
+ */
 void parse_today_weather_json(const char *json_str)
 {
     cJSON *root = cJSON_Parse(json_str);
@@ -370,13 +409,22 @@ void parse_today_weather_json(const char *json_str)
                                 
             if (*endptr != '\0') 
             {
-                printf("剩余未转换字符: %s\n", endptr);
+                printf("leaved unconverted char: %s\n", endptr);
             }
         }
     }
     cJSON_Delete(root);
 }
 
+/**
+ * @brief Parse JSON response for recent 3 day weather data
+ *
+ * Parses the JSON string returned by the weather API for current conditions,
+ * extracts the location name, textual weather description, temperature and
+ * weather code.
+ *
+ * @param json_str Null-terminated JSON string containing the API response.
+ */
 void parse_3day_weather_json(const char *json_str)
 {
     cJSON *root = cJSON_Parse(json_str);
@@ -427,7 +475,7 @@ void parse_3day_weather_json(const char *json_str)
                                 
                 if (*endptr != '\0') 
                 {
-                    printf("剩余未转换字符: %s\n", endptr);
+                    printf("leaved unconverted char : %s\n", endptr);
                 }
 
 

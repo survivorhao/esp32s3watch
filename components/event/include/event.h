@@ -163,7 +163,16 @@ typedef struct
 
 
 
-
+/**
+ * @brief Create and configure the UI event loop used for inter-component events.
+ *
+ * This function creates a dedicated FreeRTOS-based esp_event loop for
+ * application UI events and stores the resulting handle in
+ * `ui_event_loop_handle`. 
+ * Other modules should post events to this loop to decouple event producers from
+ * consumers.
+ * 
+ */
 void  ui_event_loop_init(void);
 
 

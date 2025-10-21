@@ -19,25 +19,17 @@
 #define HID_DEV_MODE HIDD_BLE_MODE
 
 #else
+#error "if want to use ble hid device please select nimble stack"
+
 #define HID_DEV_MODE HIDD_IDLE_MODE
 
 #endif
 
 #include "esp_err.h"
 #include "esp_log.h"
-
 #include "esp_bt.h"
-#if !CONFIG_BT_NIMBLE_ENABLED
-#include "esp_bt_defs.h"
-#include "esp_bt_main.h"
-#include "esp_gap_bt_api.h"
-#endif
 #include "esp_hid_common.h"
-#if CONFIG_BT_BLE_ENABLED
-#include "esp_gattc_api.h"
-#include "esp_gatt_defs.h"
-#include "esp_gap_ble_api.h"
-#endif
+
 
 #include "event.h"
 
@@ -46,32 +38,6 @@
 extern "C" {
 #endif
 
-#if !CONFIG_BT_NIMBLE_ENABLED
-typedef struct esp_hidh_scan_result_s {
-    struct esp_hidh_scan_result_s *next;
-
-    esp_bd_addr_t bda;
-    const char *name;
-    int8_t rssi;
-    esp_hid_usage_t usage;
-    esp_hid_transport_t transport; //BT, BLE or USB
-    union {
-        struct {
-            esp_bt_cod_t cod;
-            esp_bt_uuid_t uuid;
-        } bt;
-        struct {
-            esp_ble_addr_type_t addr_type;
-            uint16_t appearance;
-        } ble;
-    };
-} esp_hid_scan_result_t;
-
-esp_err_t esp_hid_scan(uint32_t seconds, size_t *num_results, esp_hid_scan_result_t **results);
-void esp_hid_scan_results_free(esp_hid_scan_result_t *results);
-const char *ble_addr_type_str(esp_ble_addr_type_t ble_addr_type);
-void print_uuid(esp_bt_uuid_t *uuid);
-#endif
 
 esp_err_t esp_hid_gap_init(uint8_t mode);
 

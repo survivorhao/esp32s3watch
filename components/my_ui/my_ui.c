@@ -40,9 +40,9 @@ static lv_obj_t *ui_Keyboard = NULL;  // Keyboard
 
 static lv_obj_t *ui_ConnectButton = NULL;  // Connect button
 
-static lv_obj_t  *ui_ip_label=NULL;
+static lv_obj_t  *ui_ip_label=NULL;     //use this to diaplay get ip address
 
-static lv_obj_t  *ui_ble_pass_label=NULL;
+static lv_obj_t  *ui_ble_pass_label=NULL;       //display ble pair PIN
 
 static char current_ssid[33] = {0};  // Temporarily store the clicked SSID
 
@@ -77,12 +77,16 @@ typedef enum {
     // WiFi connection failed or disconnected
     UI_MSG_WIFI_DISCONNECTED,     
     
+    //refresh specific path response data
     UI_MSG_SD_REFRESH_RES,
     
+    //ble pair password 
     UI_MSG_BLE_PAIR_PASS_ENTRY,
 
+    //ble pair successfully
     UI_MSG_BLE_PAIR_SUCCESS,
 
+    //ble connection close
     UI_MSG_BLE_CONNECTION_CLOSE,
 
 
@@ -99,7 +103,8 @@ typedef struct {
 static QueueHandle_t ui_message_queue;
 
 
-#define  SD_REFRESH_FILE_COUNT_MAX     30
+//max display item in specific directory
+#define  SD_REFRESH_FILE_COUNT_MAX     35
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------

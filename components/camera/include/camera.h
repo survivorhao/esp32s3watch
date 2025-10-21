@@ -1,14 +1,14 @@
 #pragma once
 
 #include    "esp_err.h"
+#include    "esp_camera.h"
 
-
+//use pin defination
 #define CAMERA_PIN_PWDN -1
 #define CAMERA_PIN_RESET -1
 #define CAMERA_PIN_XCLK 5
 #define CAMERA_PIN_SIOD 1
 #define CAMERA_PIN_SIOC 2
-
 #define CAMERA_PIN_D7 9
 #define CAMERA_PIN_D6 4
 #define CAMERA_PIN_D5 6

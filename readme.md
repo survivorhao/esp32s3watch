@@ -1,133 +1,88 @@
-# 🕒 ESP32-S3 Smart Watch 智能手表项目
+# ESP32-S3 智能手表
 
-**中文 / English 双语说明**
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![ESP-IDF 版本](https://img.shields.io/badge/ESP--IDF-release%2Fv5.4.2-green.svg)](https://github.com/espressif/esp-idf)
 
-本项目基于 **ESP-IDF v5.3.4** 开发，主控芯片为 **ESP32-S3**，配备 16 MB SPI Flash 与 8 MB PSRAM。  
-智能手表集成了 **LVGL 图形界面、Wi-Fi 网络功能、摄像头拍照、SD 卡浏览与图像显示** 等功能，展示了 ESP32-S3 在 IoT 智能设备上的综合能力。
+## 概述
 
-This project is developed based on **ESP-IDF v5.3.4**, using **ESP32-S3** as the main controller, with 16 MB SPI Flash and 8 MB PSRAM.  
-The smart watch integrates **LVGL GUI, Wi-Fi connectivity, camera capture, SD card browsing, and image display**, demonstrating the comprehensive capabilities of ESP32-S3 in IoT devices.
+本项目是一个基于 ESP32-S3 微控制器的开源智能手表开发项目。使用 ESP-IDF 框架（release/v5.4.2 版本），开发板为 LCSC-boards LCKFB-SZPI-ESP32-S3-VA（可从 [LCSC](https://www.lcsc.com/) 或 [SZLCSC](https://www.szlcsc.com/) 获取）。图形用户界面 (GUI) 采用 LVGL 实现平滑渲染和交互。
 
----
+架构强调模块化和可扩展性：
+- 使用 ESP 事件循环实现组件解耦，采用发布者/订阅者模型。发布者无需关心订阅者，反之亦然。
+- 使用单一 LVGL 任务确保 LVGL API 的线程安全，通过消息队列处理 UI 请求。
 
-## 🧩 项目特性 Features
+## 功能
 
-### 📶 Wi-Fi 网络功能 / Wi-Fi Network
+- **WiFi 管理**：支持开启/关闭、扫描和连接网络。获取 IP 地址后，自动发送 SNTP 请求同步时间至本地 RTC。同时通过 HTTPS 获取天气数据（仅限中国地区）并更新 UI。
+- **BLE HID 设备**：通过 BLE GATT 实现标准 HID 协议。在屏幕显示配对 PIN 码；加密连接后，实现音量加减、歌曲切换、播放/暂停。
+- **SD 卡文件浏览器**：读取并使用 LVGL 部件列表显示 SD 卡内容。支持目录切换和 BMP 图片查看。
+- **摄像头集成**：驱动 GC0308 摄像头，在 SPI LCD 上实时预览。支持拍照（按 BOOT0 键），保存为 BMP 格式至 SD 卡指定目录。
+- **简易计算器**：使用双栈（运算符栈和操作数栈）处理基本算术 (+, -, *, /) 和括号，支持多级嵌套表达式如 "(1*((6+2)/4)-6)"。
+- **设置界面**：配置系统选项，如天气 API 位置、屏幕亮度调节、内部 RAM 和 PSRAM 使用情况监控（若启用）、SD 卡信息（挂载状态和容量）。
+- **日历和画布**：基本日历视图和简单绘图画布。
+- **深度睡眠模式**：仅保留 RTC 电源域；RTC 时钟继续运行。唤醒后 UI 时间正常，无需重新 SNTP 同步。
 
-- 支持连接 Wi-Fi 热点 / Connect to Wi-Fi networks  
-- 获取 **网络时间 (NTP)** 并显示 / Synchronize time with NTP and display in UI  
-- 调用[心知天气] API，展示当前天气与温度 / Fetch weather data via API and show temperature & weather info  
+## 注意事项
 
-### 🖼️ LVGL 图形界面 / LVGL GUI
+- **SD 卡浏览**：如果目录文件过多，不会全部列出，因为 LVGL 部件内存分配受内部 SRAM 限制，可能导致崩溃。
+- **资源限制**：由于 ESP32-S3 内部 RAM 限制，WiFi、BLE 和摄像头无法同时使用。代码已强制限制。
+- LVGL 使用 8.3.11 版本，如需升级到 LVGL 9 版本，请自行解决版本不兼容问题。
+- 在 `/main/idf_component.yml` 文件中声明了对于其他组件的依赖，会在执行 IDF 命令时自动从 [https://components.espressif.com](https://components.espressif.com) 下载，擅自修改可能会导致不兼容问题，请慎重。
+- **其他注意**：（如需添加额外点，可在此处补充。）
 
-- 基于 [LVGL](https://lvgl.io) 构建界面 / GUI built using LVGL library  
-- **画布(Canvas)** 功能：触摸绘制实时显示 / Canvas feature: draw with touch in real time  
-- 支持图标、文本、按钮、图片显示 / Support for icons, text, buttons, and image rendering  
+## 演示图片
 
-### 💾 SD 卡浏览与图片显示 / SD Card Browser & Image Display
+![演示图片 1](asset/demo1.jpg)  
+![演示图片 2](asset/demo2.jpg)  
+![演示图片 3](asset/demo3.jpg)  
+![演示图片 4](asset/demo4.jpg)
 
-- 支持 FAT 文件系统挂载 / Mount FAT filesystem  
-- 浏览 SD 卡目录结构 / Browse SD card file structure  
-- 显示 **BMP 图片** / Display BMP images  
-- 提供基础文件选择交互 UI / Basic file selection UI  
+## 常见问题 (FAQ)
 
-### 📸 摄像头功能 / Camera Feature
+1. **可以使用其他 ESP-IDF 版本吗？**  
+   不推荐。需手动解决版本依赖问题，且旧版本有 Bug。例如，IDF v5.2 存在 I2C 中断导致看门狗超时问题。版本切换参考官方文档。
 
-- 使用 **GC0308 摄像头模组** / GC0308 camera module  
-- 拍照并保存至 SD 卡 BMP 文件 / Capture photo and save as BMP on SD card  
-- 支持拍摄预览 / Preview support before saving  
+2. **配置环境太麻烦了，我只想把程序烧录到我的 LCSC-boards LCKFB-SZPI-ESP32-S3-VA 开发板测试效果？**  
+   可以！打开 `/bin/flash_project_args` 文本文件，其中定义的下载参数依次填写到官方 flash 下载工具即可。  
+   [https://docs.espressif.com/projects/esp-test-tools/zh_CN/latest/esp32s3/production_stage/tools/flash_download_tool.html](https://docs.espressif.com/projects/esp-test-tools/zh_CN/latest/esp32s3/production_stage/tools/flash_download_tool.html)
 
----
+## 相关资源
 
-## ⚙️ 硬件配置 Hardware
+- **BLE HID 设备问题**：使用 NimBLE 栈时，初始化后反初始化 BLE 可能导致崩溃。参考：  
+  [https://github.com/espressif/esp-idf/issues/17493#issue-3353465850](https://github.com/espressif/esp-idf/issues/17493#issue-3353465850)
+- **BLE HID 参考资料**：  
+  [HID Usage Tables](https://usb.org/document-library/hid-usage-tables-16)  
+  [Bluetooth Core Specification 5.0](https://www.bluetooth.com/specifications/specs/core-specification-5-0/)  
+  [USB HID Device Class Definition](https://www.usb.org/document-library/device-class-definition-hid-111)
+- **ESP-IDF 官方文档**：  
+  [ESP-IDF for ESP32-S3 (v5.4)](https://docs.espressif.com/projects/esp-idf/zh_CN/release-v5.4/esp32s3/index.html)  
+  [Espressif Components Registry](https://components.espressif.com/)
 
-| 模块 Module | 型号 / Description |
-|-------------|------------------|
-| MCU | ESP32-S3 |
-| Flash | 16 MB SPI Flash |
-| PSRAM | 8 MB |
-| 显示屏 st7789 LCD | SPI 接口 LCD 支持 LVGL / SPI LCD supporting LVGL |
-| 触摸屏 ft6336 Touch | I²C 电容触摸屏 / I²C capacitive touch |
-| 摄像头 GC0308 Camera | 
-| 存储 Storage | MicroSD 卡 / MicroSD card |
+## 安装
 
+请先确保你已经安装好了 ESP-IDF 指定版本以及配套工具，如果没有请参考官方教程。
 
-## 🧠 软件架构 Software Architecture
-
-
-
-
-## 🛠️ 开发环境 Development Environment
-
-* **操作系统 / OS:** Ubuntu 20.04 LTS
-* **ESP-IDF 版本 / ESP-IDF Version:** v5.3.4
-* **工具链 / Toolchain:** xtensa-esp32s3-elf
-* **构建系统 / Build System:** CMake + Ninja
-* **开发工具 / IDE:** VSCode / CLion / Terminal
-
----
-
-## 🚀 快速开始 Quick Start
-
-1. **克隆仓库 / Clone repository**
-
-   ```bash
-   git clone https://github.com/survivorhao/test_repository.git
-
-
-2. **设置 ESP-IDF 环境 / Set up ESP-IDF**
-
-   ```bash
-   . $HOME/esp/esp-idf/export.sh
+1. 克隆仓库：  
+   ```
+   git clone https://github.com/yourusername/esp32s3-smart-watch.git
+   cd esp32s3-smart-watch
    ```
 
-3. **配置项目 / Configure project**
-
-   ```bash
+2. 配置：  
+   ```
    idf.py menuconfig
    ```
 
-4. **编译与烧录 / Build & Flash**
-
-   ```bash
-   idf.py build flash monitor
+3. 构建并烧录：  
+   ```
+   idf.py build
+   idf.py -p /dev/ttyUSB0 flash monitor  # 替换为你的端口
    ```
 
----
+## 贡献
 
-## 📷 效果展示 Preview
+欢迎贡献！Fork 仓库，创建分支，并提交拉取请求。
 
-| 功能 / Feature         | 示例 / Demo                           |
-| -------------------- | ----------------------------------- |
-| 网络时间 / NTP           | 🕓 实时显示 / Realtime clock            |
-| 天气信息 / Weather       | 🌤️ 天气 & 温度 / Weather & temperature |
-| 画布绘图 / Canvas        | ✏️ 触摸即画 / Draw by touch             |
-| SD卡图片浏览 / SD Browser | 🖼️ 显示 BMP / Display BMP images     |
-| 拍照存储 / Camera        | 📸 BMP 保存 / Save photo as BMP       |
+## 许可证
 
-
-
-## 📚 后续计划 TODO
-
-* [ ] 增加 BLE 通信模块 / Add BLE communication
-* [ ] 增加 心率/计步传感器 / Heart rate & step sensor support
-* [ ] 优化 LVGL UI 动画与页面切换 / Optimize LVGL animations
-* [ ] 支持 JPG 图像格式 / Add JPG support
-
----
-
-## 🧾 License
-
-本项目遵循 [MIT License](LICENSE) / MIT License
-
----
-
-## ✨ 作者 Author
-
-**Survivorhao**
-📧 [2737278737@qq.com](mailto:2737278737@qq.com)
-🔗 GitHub: [https://github.com/survivorhao](https://github.com/survivorhao)
-
-
-
-
+MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。

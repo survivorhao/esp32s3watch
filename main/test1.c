@@ -24,7 +24,6 @@
 #include    "wifi_connect.h"
 #include    "time_srv.h"
 #include    "weather_srv.h"
-#include    "esp_camera.h"
 #include    "ble_srv.h"
 #include    "esp_hid_gap.h"
 

@@ -1,6 +1,5 @@
 #include    <stdio.h>
 #include    "esp_log.h"
-#include    "esp_camera.h"
 #include    "freertos/FreeRTOS.h"
 #include    "freertos/task.h"
 #include    "freertos/queue.h"
@@ -610,13 +609,7 @@ static void user_camera_init_handler(void* arg, esp_event_base_t event_base, int
     ESP_LOGI(TAG,"receive app_camera_enter event");
     if(i2c_master_bus_wait_all_done(I2C_Master_bus_handle,-1)==ESP_OK)
     {
-        // i2c_master_bus_reset(I2C_Master_bus_handle);
-
         ESP_LOGI(TAG,"i2c bus transaction flush success");
-
-        // vTaskSuspend();
-
-
     }
     vTaskDelay(pdMS_TO_TICKS(2000));
     if(bsp_camera_init() == ESP_OK)

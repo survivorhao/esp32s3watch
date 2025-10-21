@@ -26,10 +26,10 @@ typedef struct {
     esp_hidd_dev_t *hid_dev;    
     uint8_t protocol_mode;  
     uint8_t *buffer;    
-    bool connected;             // Add: Connection status flag
-    uint16_t conn_handle;       // Add: BLE connection handle
-    SemaphoreHandle_t deinit_sem; // Add: Semaphore to wait for disconnect during deinit
-    bool is_deinitializing;     // Add: Flag to signal intentional deinit
+    bool connected;             // Connection status flag
+    uint16_t conn_handle;       // BLE connection handle
+    SemaphoreHandle_t deinit_sem; // Semaphore to wait for disconnect during deinit
+    bool is_deinitializing;     // Flag to signal intentional deinit
 } local_param_t;
 
 
@@ -37,21 +37,21 @@ static local_param_t s_ble_hid_param = {0};
 
 const unsigned char mediaReportMap[] = {
 
-    // --- Top-level Collection (Report ID 3: Media Control) ---
+    //Top-level Collection (Report ID 3: Media Control) 
     0x05, 0x0C,       // Usage Page (Consumer Devices - 0x0C)
     0x09, 0x01,       // Usage (Consumer Control - 0x01)
     0xA1, 0x01,       // Collection (Application)
 
     0x85, 0x03,       // Report ID (3)  <-- Using Report ID 3
 
-    // 1. Define input fields (bit fields) for 5 media keys.
+    //Define input fields (bit fields) for 5 media keys.
     0x15, 0x00,       // Logical Minimum (0)  <-- 0 indicates not pressed
     0x25, 0x01,       // Logical Maximum (1)  <-- 1 indicates pressed
 
     // Use the Usage Minimum/Maximum range to define 5 buttons at once.
     // Ensure that the sequence of these 5 Usage IDs you define is continuous, or define them through multiple Usage Items.
     
-    // Method 1: Precisely define the 5 keys you need (Bit 0 - Bit 4)
+    //define the 5 keys you need (Bit 0 - Bit 4)
     0x09, 0xB5,       //   Usage (Scan Next Track)
     0x09, 0xB6,       //   Usage (Scan Previous Track)
     0x09, 0xCD,       //   Usage (Play/Pause)
@@ -62,12 +62,12 @@ const unsigned char mediaReportMap[] = {
     0x95, 0x05,       // Report Count (5)    <-- A total of 5 keys
     0x81, 0x02,       // Input (Data, Var, Abs) <-- Key data (Bit Field)
 
-    // 2. Pad the remaining bits to align the report to the byte boundary (3 bits of padding)
+    //Pad the remaining bits to align the report to the byte boundary (3 bits of padding)
     0x75, 0x03,       // Report Size (3 bits) <-- Remaining 3 bits
     0x95, 0x01,       //   Report Count (1)
     0x81, 0x03,       // Input (Const, Var, Abs) <-- Padding/constant data
 
-    // 3. Pad the second byte (optional, but recommended to use a multiple of bytes)
+    //Pad the second byte (optional, but recommended to use a multiple of bytes)
     0x75, 0x08,       //   Report Size (8 bits)
     0x95, 0x01,       //   Report Count (1)
     0x81, 0x03,       //   Input (Const, Var, Abs)
@@ -192,11 +192,9 @@ static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
 static void user_ble_set_conn_handle_handler(void* arg, esp_event_base_t event_base,
                                            int32_t event_id, void* event_data);
 
-static void user_pair_success_handler(void* arg, esp_event_base_t event_base,
-                                           int32_t event_id, void* event_data);
-
 static void user_consumer_control_handler(void* arg, esp_event_base_t event_base,
 int32_t event_id, void* event_data);
+
 
 
 static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, 
@@ -214,6 +212,15 @@ void esp_hidd_send_consumer_control(uint8_t key_cmd, bool key_pressed);
 //----------------------------------------------------------------------------------------------------------------------------
 
 #if CONFIG_BT_NIMBLE_ENABLED
+/**
+ * @brief BLE host task entry for NimBLE.
+ *
+ * This task runs the NimBLE host stack. It will return only when
+ * nimble_port_stop() is executed. The function calls into the NimBLE
+ * event loop and then deinitializes the FreeRTOS port on exit.
+ *
+ * @param param Unused parameter pointer passed by the task create API.
+ */
 void ble_hid_device_host_task(void *param)
 {
     ESP_LOGI(TAG, "BLE Host Task Started");
@@ -229,6 +236,13 @@ void ble_store_config_init(void);
 
 
 
+/**
+ * @brief Register BLE-related event handlers with the UI event loop.
+ *
+ * Registers handlers for BLE start/close events, connection-handle updates
+ * and consumer-control events so the application can react to BLE lifecycle
+ * events originating from the UI/event system.
+ */
 void ble_register_srv_handler(void)
 {
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, 
@@ -239,9 +253,6 @@ void ble_register_srv_handler(void)
 
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, 
                                     APP_BLE_SET_CONN_HANDLE, user_ble_set_conn_handle_handler, NULL));
-    
-    ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, 
-                                    APP_BLE_PAIR_SUCCESS, user_pair_success_handler, NULL));
 
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle,APP_EVENT, 
                                 APP_BLE_CONSUMER_CONTROL, user_consumer_control_handler, NULL));
@@ -250,6 +261,17 @@ void ble_register_srv_handler(void)
 
 
 
+/**
+ * @brief Event handler invoked when BLE should be started.
+ *
+ * Initializes BLE GAP and HID device, configures advertising, sets up a
+ * semaphore used during deinitialization, and starts the NimBLE host task.
+ *
+ * @param arg Unused handler argument.
+ * @param event_base Event base the event was posted to.
+ * @param event_id Event identifier.
+ * @param event_data Event-specific data (unused).
+ */
 static void user_ble_start_handler(void* arg, esp_event_base_t event_base,
                                            int32_t event_id, void* event_data)
 {
@@ -306,6 +328,18 @@ static void user_ble_start_handler(void* arg, esp_event_base_t event_base,
 
 
 
+/**
+ * @brief Event handler invoked to close/deinitialize BLE resources.
+ *
+ * Stops advertising, terminates any active connection (waiting for the
+ * disconnect semaphore), resets GATT server state, deinitializes the HID
+ * device, and deinitializes NimBLE and BLE controller resources.
+ *
+ * @param arg Unused handler argument.
+ * @param event_base Event base the event was posted to.
+ * @param event_id Event identifier.
+ * @param event_data Event-specific data (unused).
+ */
 static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
                                            int32_t event_id, void* event_data)
 {
@@ -368,10 +402,8 @@ static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
         return ;
     }
 
-
     esp_bt_controller_status_t sta=esp_bt_controller_get_status();
-    ESP_LOGW(TAG,"ble controller status is %d",sta);
-
+    ESP_LOGI(TAG,"ble controller status is %d",sta);
 
     vSemaphoreDelete(s_ble_hid_param.deinit_sem);
     s_ble_hid_param.deinit_sem = NULL;
@@ -382,6 +414,17 @@ static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
 
 
 
+/**
+ * @brief Event handler to update stored BLE connection handle.
+ *
+ * Expects event_data to point to a uint16_t containing the new connection
+ * handle value which is stored in the local state for later operations.
+ *
+ * @param arg Unused handler argument.
+ * @param event_base Event base the event was posted to.
+ * @param event_id Event identifier.
+ * @param event_data Pointer to a uint16_t holding the connection handle.
+ */
 static void user_ble_set_conn_handle_handler(void* arg, esp_event_base_t event_base,
                                            int32_t event_id, void* event_data)
 {
@@ -395,17 +438,19 @@ static void user_ble_set_conn_handle_handler(void* arg, esp_event_base_t event_b
 
 }
 
-static void user_pair_success_handler(void* arg, esp_event_base_t event_base,
-                                           int32_t event_id, void* event_data)
-{
 
-
-
-
-
-}
-
-//Receive the BLE consumer control events generated by clicking the button widget.
+/**
+ * @brief UI event handler that sends consumer control HID reports.
+ * Receive the BLE consumer control events generated by clicking the button widget.
+ * The handler reads a consumer control usage code from event_data and sends
+ * a press followed by a short delay and a release report to the connected
+ * HID host to emulate a button click.
+ *
+ * @param arg Unused handler argument.
+ * @param event_base Event base the event was posted to.
+ * @param event_id Event identifier.
+ * @param event_data Pointer to a uint8_t containing the consumer control code.
+ */
 static void user_consumer_control_handler(void* arg, esp_event_base_t event_base,
                                            int32_t event_id, void* event_data)
 {
@@ -419,6 +464,19 @@ static void user_consumer_control_handler(void* arg, esp_event_base_t event_base
     }
 }
 
+
+/**
+ * @brief Callback that handles HID device events from esp_hidd.
+ *
+ * Handles HID lifecycle events (start, connect, protocol mode changes,
+ * control, output, feature, disconnect and stop). Updates local connection
+ * state, triggers advertising and posts application-level events when needed.
+ *
+ * @param handler_args Callback-specific arguments (opaque).
+ * @param base Event base from esp_hidd.
+ * @param id Event id corresponding to esp_hidd_event_t.
+ * @param event_data Pointer to event-specific data (esp_hidd_event_data_t*).
+ */
 static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, int32_t id, void *event_data)
 {
     esp_hidd_event_t event = (esp_hidd_event_t)id;
@@ -501,9 +559,16 @@ static void ble_hidd_event_callback(void *handler_args, esp_event_base_t base, i
 
 
 
-/// @brief 
-/// @param key_cmd ble hid device consumer control
-/// @param key_pressed whether pressed or released
+/**
+ * @brief Update and send a consumer control HID input report.
+ *
+ * This function adjusts the global report_buffer based on the requested
+ * consumer control key (volume, track, play/pause) and whether the key is
+ * being pressed or released, then sends the input report to the HID host.
+ *
+ * @param key_cmd Consumer control usage code (see HID_CONSUMER_* defines).
+ * @param key_pressed True to send a press report, false to send a release.
+ */
 void esp_hidd_send_consumer_control(uint8_t key_cmd, bool key_pressed)
 {
     
@@ -570,6 +635,7 @@ void esp_hidd_send_consumer_control(uint8_t key_cmd, bool key_pressed)
         }
     }
 
+    //send data
     esp_hidd_dev_input_set(s_ble_hid_param.hid_dev, 0, HID_RPT_ID_CC_IN, report_buffer, HID_CC_IN_RPT_LEN);
     return;
 }
