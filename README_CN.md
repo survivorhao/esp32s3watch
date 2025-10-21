@@ -46,7 +46,8 @@
    不推荐。需手动解决版本依赖问题，且旧版本有 Bug。例如，IDF v5.2 存在 I2C 中断导致看门狗超时问题。版本切换参考官方文档。
 
 2. **配置环境太麻烦了，我只想把程序烧录到我的 LCSC-boards LCKFB-SZPI-ESP32-S3-VA 开发板测试效果？**  
-   可以！打开 `/bin/flash_project_args` 文本文件，其中定义的下载参数依次填写到官方 flash 下载工具即可。  
+   可以！打开 `/bin/flash_project_args` 文本文件，其中定义的下载参数依次填写到官方 flash 下载工具即可。
+   参考[这里的下载参数配置演示图](asset/flash_download.png)
    [https://docs.espressif.com/projects/esp-test-tools/zh_CN/latest/esp32s3/production_stage/tools/flash_download_tool.html](https://docs.espressif.com/projects/esp-test-tools/zh_CN/latest/esp32s3/production_stage/tools/flash_download_tool.html)
 
 ## 相关资源
