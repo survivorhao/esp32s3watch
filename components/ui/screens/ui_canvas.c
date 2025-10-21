@@ -13,10 +13,6 @@ static void draw_event_cb(lv_event_t* e);
 
 static void clear_button_event_cb(lv_event_t* e)
 {
-    // 获取事件触发的对象（按钮）
-    lv_obj_t* btn = lv_event_get_target(e);
-
-    // 调用 LVGL 画布 API 清空画布
     // 使用 lv_color_white() 填充为白色，LV_OPA_COVER 确保不透明
     lv_canvas_fill_bg(drawing_canvas, lv_color_hex(0x000000), LV_OPA_COVER);
 

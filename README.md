@@ -1,4 +1,6 @@
-[中文版本](/README_CN.md)
+[中文版本](README_CN.md)
+
+# ESP32-S3 Smart Watch
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![ESP-IDF Version](https://img.shields.io/badge/ESP--IDF-release%2Fv5.4.2-green.svg)](https://github.com/espressif/esp-idf)
@@ -24,10 +26,10 @@ The architecture emphasizes modularity and scalability:
 
 ## Limitations
 
-- **SD Card Browsing**: If a directory has too many files, not all will be listed due to LVGL widget memory allocation limits in internal SRAM, which may cause crashes. The file browser only supports displaying BMP format images with 16/24/32-bit color depth. Decoded images are stored in PSRAM and freed after display, so no need to worry about RAM usage.
-- **Resource Constraints**: Due to ESP32-S3 internal RAM limitations, WiFi, BLE, and camera cannot be used simultaneously. The code enforces this restriction.
-- LVGL uses version 8.3.11. If upgrading to LVGL v9, resolve version incompatibility issues yourself.
-- Dependencies are declared in `/main/idf_component.yml` and will be automatically downloaded from [https://components.espressif.com](https://components.espressif.com) during IDF commands. Modifying this may cause incompatibility issues; proceed with caution.
+- **SD Card Browsing**: If a directory contains too many files, not all contents will be listed completely, as LVGL widget memory allocation is limited by internal SRAM, potentially causing program crashes. Additionally, the SD card file browser only supports displaying BMP format images (compatible with 16/24/32-bit color depths). Decoded images are temporarily stored in PSRAM and released immediately after display, so there's no need to worry about RAM occupancy.
+- **Resource Constraints**: Given the limited internal RAM capacity of the ESP32-S3, WiFi, BLE, and camera functions cannot be enabled simultaneously. The code includes a built-in enforcement mechanism to avoid potential conflicts.
+- **LVGL Version**: This project uses LVGL version 8.3.11. If upgrading to LVGL 9 or higher, please handle any potential version compatibility issues yourself.
+- **Component Dependencies**: All external component dependencies are declared in the `/main/idf_component.yml` file. These dependencies will be automatically downloaded from [https://components.espressif.com](https://components.espressif.com) when executing IDF commands. Do not modify arbitrarily to avoid compatibility issues.
 - **Other Notes**: (Add additional points here if needed.)
 
 ## Demo Images
@@ -60,31 +62,41 @@ The architecture emphasizes modularity and scalability:
 - **Seniverse Weather API**:  
   [https://seniverse.yuque.com/hyper_data/api_v3](https://seniverse.yuque.com/hyper_data/api_v3)
 
+
 ## Installation
 
-Please ensure you have installed the specified ESP-IDF version and accompanying tools. If not, refer to the official tutorial.
+Please first ensure that you have installed the specified version of ESP-IDF and its accompanying tools. If not, please refer to the official tutorial.
 
-1. Clone the repository:  
+1. Clone the repository:
    ```
-   git clone https://github.com/survivorhao/esp32s3watch.git
+   git clone [https://github.com/survivorhao/esp32s3watch.git](https://github.com/survivorhao/esp32s3watch.git)
    cd esp32s3watch
    ```
 
-2. Configure:  
+2. Set the target:
    ```
-   idf.py menuconfig
+   idf.py set-target esp32s3
    ```
 
-3. Build and flash:  
+3. Configure: (The build system will automatically read the /sdkconfig.defaults file), you do not need to configure any further items
+   ```
+   idf.py menuconfig
+
+   ```
+
+4. Replace the file at `Local Project Path/managed_components/lvgl/lv_conf_remplate.h` with `Local Project Path/lv_conf.h` to configure LVGL related settings.
+Modify the specified file according to `errorX.png` and `errorX_fix.png` located under the `/asset/` directory.
+
+5. Build and flash:
    ```
    idf.py build
-   idf.py -p /dev/ttyUSB0 flash monitor  # Replace with your port
+   idf.py -p /dev/ttyUSB0 flash monitor  \# Replace with your port
    ```
 
 ## Contributing
 
 Contributions are welcome! Fork the repo, create a branch, and submit a pull request.
-
+If you are interested in this project or encounter any problems, you can send an email directly to hao962112@gmail.com.
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.

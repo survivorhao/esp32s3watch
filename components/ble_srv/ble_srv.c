@@ -181,10 +181,6 @@ static esp_hid_device_config_t ble_hid_config = {
 static void user_ble_start_handler(void* arg, esp_event_base_t event_base,int32_t event_id, void* event_data);
 
 
-static void user_ble_pair_pass_entry_handler(void* arg, esp_event_base_t event_base,
-                                           int32_t event_id, void* event_data);
-
-
 static void user_ble_close_handler(void* arg, esp_event_base_t event_base,
                                            int32_t event_id, void* event_data);
 

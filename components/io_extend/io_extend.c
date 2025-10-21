@@ -51,9 +51,6 @@ esp_err_t   io_extend_read_reg(uint8_t  reg,uint8_t *read_buf, uint8_t read_leng
 {
     esp_err_t ret;
 
-    uint8_t   write_buf;
-    write_buf=reg;
-
     ret=i2c_master_transmit_receive( I2C_Master_io_extend_dev_handle, &reg, 1, read_buf,  read_length,  2000);
     if(ret!=ESP_OK)
     {
@@ -105,8 +102,6 @@ esp_err_t   io_extend_write_reg(uint8_t  reg,uint8_t data)
 esp_err_t    io_extend_init(void)
 {   
     esp_err_t ret;
-    uint8_t   config_reg;
-
 
     ret=io_extend_write_reg(IO_EXTEND_OUT_PORT_REG,0X05);
     

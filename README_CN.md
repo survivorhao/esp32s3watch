@@ -1,5 +1,7 @@
 
-[English Version](/README.md)
+[English Version](README.md)
+
+# ESP32-S3 智能手表
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![ESP-IDF 版本](https://img.shields.io/badge/ESP--IDF-release%2Fv5.4.2-green.svg)](https://github.com/espressif/esp-idf)
@@ -25,11 +27,11 @@
 
 ## 注意事项
 
-- **SD 卡浏览**：如果目录文件过多，不会全部列出，因为 LVGL 部件内存分配受内部 SRAM 限制，可能导致崩溃。SD 卡文件浏览仅支持显示 BMP 格式图片，颜色深度 16/24/32 位均支持，解码后的图片存放在 PSRAM 中，显示完即回收，无需担心 RAM 占用问题。
-- **资源限制**：由于 ESP32-S3 内部 RAM 限制，WiFi、BLE 和摄像头无法同时使用。代码已强制限制。
-- LVGL 使用 8.3.11 版本，如需升级到 LVGL 9 版本，请自行解决版本不兼容问题。
-- 在 `/main/idf_component.yml` 文件中声明了对于其他组件的依赖，会在执行 IDF 命令时自动从 [https://components.espressif.com](https://components.espressif.com) 下载，擅自修改可能会导致不兼容问题，请慎重。
-- **其他注意**：（如需添加额外点，可在此处补充。）
+- **SD 卡浏览**：若目录下文件过多，将无法完整列出所有内容，这是由于 LVGL 部件的内存分配受限于内部 SRAM，可能引发程序崩溃。此外，SD 卡文件浏览器仅支持显示 BMP 格式图片（兼容 16/24/32 位颜色深度）。解码后的图片会临时存放在 PSRAM 中，并在显示后立即释放，因此无需担心 RAM 占用问题。
+- **资源限制**：鉴于 ESP32-S3 的内部 RAM 容量有限，WiFi、BLE 和摄像头功能无法同时启用。代码中已内置强制限制机制，以避免潜在冲突。
+- **LVGL 版本**：本项目采用 LVGL 8.3.11 版本。若需升级至 LVGL 9 或更高版本，请自行处理潜在的版本兼容性问题。
+- **组件依赖**：在 `/main/idf_component.yml` 文件中已声明所有外部组件依赖。这些依赖将在执行 IDF 命令时自动从 [https://components.espressif.com](https://components.espressif.com) 下载。请勿擅自修改，以免引发兼容性问题。
+- **其他注意**：（如需补充额外事项，可在此处添加。）
 
 ## 演示图片
 
@@ -70,13 +72,20 @@
    git clone https://github.com/survivorhao/esp32s3watch.git
    cd esp32s3watch
    ```
+2. 设置目标：
+   ```
+   idf.py set-target esp32s3
+   ```
 
-2. 配置：  
+3. 配置：(构建系统会自动读取 /sdkconfig.defaults 文件)，你无需在配置任何项  
    ```
    idf.py menuconfig
    ```
-
-3. 构建并烧录：  
+4. 使用 本地项目路径/lv_conf.h 替换 本地项目路径/managed_components/lvgl/lv_conf_remplate.h 文件
+   来配置lvgl相关设置。
+   按照/asset/目录下的 errorX.png 和errorX_fix.png 修改指定文件。
+   
+5. 构建并烧录：
    ```
    idf.py build
    idf.py -p /dev/ttyUSB0 flash monitor  # 替换为你的端口
@@ -85,7 +94,7 @@
 ## 贡献
 
 欢迎贡献！Fork 仓库，创建分支，并提交拉取请求。
-
+如果你对这个项目感兴趣或者遇到了什么问题可以添加QQ群聊1029609832或者直接发送邮件给2059931521@qq.com
 ## 许可证
 
 MIT 许可证 - 详见 [LICENSE](LICENSE) 文件。

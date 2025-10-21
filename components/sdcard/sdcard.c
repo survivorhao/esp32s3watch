@@ -290,7 +290,7 @@ void sdcard_init_mount_fs(void)
     ESP_LOGI(TAG, "Filesystem mounted");
 
     // Card has been initialized, print its properties
-    sdmmc_card_print_info(stdout, card);
+    // sdmmc_card_print_info(stdout, card);
 
     ESP_ERROR_CHECK(esp_event_handler_register_with(ui_event_loop_handle, APP_EVENT, 
                                 APP_FILE_REFRESH_REQUEST, user_sd_refresh_handler, NULL));
