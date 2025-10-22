@@ -15,7 +15,7 @@
 #include "ui_clock.h"
 #include "ui_lockScreen.h"
 #include "ui_wifi.h"
-#include "event.h"
+#include "custom_event.h"
 #include "wifi_connect.h"
 
 

@@ -31,7 +31,7 @@
 #include "esp_hid_common.h"
 
 
-#include "event.h"
+#include "custom_event.h"
 
 
 #ifdef __cplusplus

@@ -47,7 +47,7 @@ idf_component_register(SRCS ${SOURCES}
                        "./components" 
                        PRIV_REQUIRES    
                        
-                       REQUIRES      lvgl   esp_lvgl_port  event nvs_flash weather_srv
+                       REQUIRES      lvgl   esp_lvgl_port  custom_event nvs_flash weather_srv
                         bsp_driver time_srv sdcard
                        )
 

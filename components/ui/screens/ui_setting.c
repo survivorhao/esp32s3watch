@@ -25,26 +25,35 @@ lv_obj_t *slider_label=NULL;
 lv_obj_t *lightness_exit_but=NULL;
 
 
-
+//
 lv_obj_t *ram_use_screen=NULL;
 lv_obj_t *ram_use_exit_but=NULL;
 lv_obj_t *psram_label=NULL;
 lv_obj_t *inter_ram_label=NULL;
 
+//
 lv_obj_t *sd_status_screen=NULL;
 lv_obj_t *sd_status_exit_but=NULL;
 lv_obj_t *sd_status_label=NULL;
 
-
+//
 lv_obj_t *camera_pic_screen=NULL;
 lv_obj_t *camera_pic_exit_but=NULL;
 lv_obj_t *camera_pic_button=NULL;
 
+//
+lv_obj_t *sleep_screen=NULL;
+lv_obj_t *sleep_exit_but=NULL;
+lv_obj_t *sleep_text_area=NULL;
+lv_obj_t *sleep_keyboard=NULL;
+lv_obj_t *sleep_ensure_but=NULL;
+
+static uint32_t setting_sleep_time;
 
 static const char *TAG="ui_setting ";
 
 //total setting options number is 
-#define TOTAL_SETTING_OPTIONS    6
+#define TOTAL_SETTING_OPTIONS    7
 
 
 
@@ -56,7 +65,7 @@ void lightness_adjust_handler(void *arg);
 void ram_use_info_handler(void *arg);
 void sd_mount_status_handler(void *arg);
 void camera_saved_pic_handler(void *arg);
-
+void auto_sleep_time_handler(void *arg);
 //---------------------------------------end---------------------------------------------------
 //---------------------------------------------------------------------------------------------
 
@@ -65,7 +74,11 @@ void camera_saved_pic_handler(void *arg);
 
 
 void save_custom_setting_to_nvs(void);
+void save_auto_sleep_time_to_nvs(void);
+
 void append_city(char *arr, size_t arr_size, const char *city);
+void append_sleep_time(char *arr, size_t arr_size, uint32_t data);
+
 void nvs_store_weather_pos_load(void);
 void get_ram_use(void);
 
@@ -77,22 +90,22 @@ static char   Setting_option_array[10][64]={
                     "sdcard mount status",
                     "camera saved pic",
 
+                    "auto sleep time",
                     "author: survivorhao",
-                    "",
                     "",
                     "",
                     "",
 };
 
 //each setting option coule have a handler which can be registered here, type is void (*handler)(void *) 
-static const void (*Setting_option_handler[10])(void *)={
+static void (*Setting_option_handler[10])(void *)={
                     lightness_adjust_handler,
                     weather_pos_handler,
                     ram_use_info_handler,
                     sd_mount_status_handler,
                     camera_saved_pic_handler,
 
-                    NULL,
+                    auto_sleep_time_handler,
                     NULL,
                     NULL,
                     NULL,
@@ -130,7 +143,9 @@ void ui_setting_return_event_cb(lv_event_t * e)
             lightness_screen=NULL;
         }
 
+        //save configuration to nvs
         save_custom_setting_to_nvs();
+
 
 
     }
@@ -157,7 +172,7 @@ static void ensure_button_click_cb(lv_event_t *e)
     esp_err_t ret = esp_event_post_to(ui_event_loop_handle, APP_EVENT, APP_WEATHER_POSITION_CHANGE, NULL, 0, portMAX_DELAY);
     if(ret == ESP_OK) 
     {
-        append_city(Setting_option_array[1], sizeof(Setting_option_array[1]), weather_position);
+        append_city(Setting_option_array[1],sizeof(Setting_option_array[1]), weather_position);
         
         ESP_LOGI(TAG,"now complete is %s",Setting_option_array[1]);
         for(uint8_t i = 0; i < lv_obj_get_child_cnt(current_click_button); i++) 
@@ -181,6 +196,50 @@ static void ensure_button_click_cb(lv_event_t *e)
 
 }
 
+static void sleep_ensure_button_click_cb(lv_event_t *e) 
+{
+    const char *text = lv_textarea_get_text(sleep_text_area);
+    if (text == NULL || strlen(text) == 0) 
+    {
+        ESP_LOGW(TAG, "NULL input, ignoring change weather position request");
+        return; 
+    }
+    uint32_t  number =(uint32_t) atoi(text);
+
+    ESP_LOGI(TAG,"ensure pressed, now auto sleep time is %"PRIu32,number);
+    setting_sleep_time=number;
+    
+    //change auto sleep timer period
+    auto_deep_sleep_timer_change(number);
+
+    //change specific setting option text string
+    append_sleep_time(Setting_option_array[5], sizeof(Setting_option_array[5]),number);
+
+    //sace new auto sleep time to nvs
+    save_auto_sleep_time_to_nvs();
+    
+    //update setting option list
+    for(uint8_t i = 0; i < lv_obj_get_child_cnt(current_click_button); i++) 
+    {
+        lv_obj_t * child = lv_obj_get_child(current_click_button, i);
+        if(lv_obj_check_type(child, &lv_label_class)) 
+        {
+            
+            lv_label_set_text(child, Setting_option_array[5]);
+            break;
+        }
+    }
+
+    _ui_screen_change(&ui_setting, LV_SCR_LOAD_ANIM_NONE, 0, 100, ui_setting_screen_init);
+ 
+    if(sleep_screen!=NULL)
+    {
+        lv_obj_del_delayed(sleep_screen,400);
+        sleep_screen=NULL;
+    }
+    
+}
+
 /// @brief 
 /// @param e 
 static void setting_button_click_cb(lv_event_t *e) 
@@ -190,7 +249,7 @@ static void setting_button_click_cb(lv_event_t *e)
     
     if (option != NULL) 
     {
-        ESP_LOGI(TAG, "setting %s ....", option);
+        ESP_LOGI(TAG, "click option %s :....", option);
         
         uint8_t option_index=0;
 
@@ -289,8 +348,6 @@ void ui_sd_status_return_event_cb(lv_event_t * e)
             lv_obj_del_delayed(sd_status_screen,200);
             sd_status_screen=NULL;
 
-
-
         }
     }
 }
@@ -317,6 +374,27 @@ void ui_camera_pic_return_event_cb(lv_event_t * e)
         }
     }
 }
+// @brief click this button to return to previous screen 
+/// @param e 
+void ui_sleep_return_event_cb(lv_event_t * e)
+{
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+    if(event_code == LV_EVENT_CLICKED) 
+    {
+
+        _ui_screen_change(&ui_setting, LV_SCR_LOAD_ANIM_NONE, 0, 0, ui_setting_screen_init);     
+        
+        if(sleep_screen)
+        {
+            lv_obj_del_delayed(sleep_screen,200);
+            sleep_screen=NULL;
+
+
+
+        }
+    }
+}
 
 void ui_camera_pic_delete_cb(lv_event_t * e)
 {
@@ -330,6 +408,26 @@ void ui_camera_pic_delete_cb(lv_event_t * e)
     }
 
 }
+
+
+static void sleep_keyboard_event_cb(lv_event_t * e)
+{
+    lv_obj_t * btnm = lv_event_get_target(e);
+    lv_obj_t * ta = lv_event_get_user_data(e);  // 获取 textarea
+    uint16_t btn_id = lv_btnmatrix_get_selected_btn(btnm);
+
+    if (btn_id == LV_BTNMATRIX_BTN_NONE) return;
+
+    const char * txt = lv_btnmatrix_get_btn_text(btnm, btn_id);
+    if (txt) {
+        if (strcmp(txt, "del") == 0) {
+            lv_textarea_del_char(ta);  // 删除最后一个字符
+        } else {
+            lv_textarea_add_text(ta, txt);  // 追加数字
+        }
+    }
+}
+
 /// @brief 
 /// @param  
 void ui_setting_screen_init(void )
@@ -375,6 +473,13 @@ void ui_setting_screen_init(void )
 
     //append nvs weather position data to specific Setting option
     append_city(Setting_option_array[1], sizeof(Setting_option_array[1]), weather_position);
+
+    setting_sleep_time=auto_sleep_time_get();
+    
+    append_sleep_time(Setting_option_array[5], sizeof(Setting_option_array[5]), setting_sleep_time);
+
+    save_auto_sleep_time_to_nvs();
+
 
     //create setting options
     for(uint8_t i=0; i<TOTAL_SETTING_OPTIONS; i++)
@@ -626,6 +731,70 @@ void ui_camera_pic_screen_init(void)
 
 }
 
+void ui_sleep_screen_init(void)
+{
+    sleep_screen = lv_obj_create(NULL);  
+    lv_obj_set_style_bg_color(sleep_screen, lv_color_hex(0xffffff), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(sleep_screen, 255, LV_PART_MAIN);
+    lv_obj_clear_flag(sleep_screen, LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+    LV_OBJ_FLAG_SCROLL_CHAIN|LV_OBJ_FLAG_SCROLLABLE);      /// Flags
+
+    //create exit button (which be pressed will change current display to before one )
+    sleep_exit_but = lv_img_create(sleep_screen);
+    lv_img_set_src(sleep_exit_but , &ui_img_return_png);
+    lv_obj_set_width(sleep_exit_but , LV_SIZE_CONTENT);   /// 1
+    lv_obj_set_height(sleep_exit_but , LV_SIZE_CONTENT);    /// 1
+    lv_obj_align(sleep_exit_but , LV_ALIGN_TOP_MID, -90, -50);
+    lv_obj_add_flag(sleep_exit_but , LV_OBJ_FLAG_CLICKABLE);     /// Flags
+    lv_obj_clear_flag(sleep_exit_but , LV_OBJ_FLAG_PRESS_LOCK | LV_OBJ_FLAG_CLICK_FOCUSABLE | LV_OBJ_FLAG_GESTURE_BUBBLE |
+                        LV_OBJ_FLAG_SNAPPABLE  | LV_OBJ_FLAG_SCROLL_ELASTIC | LV_OBJ_FLAG_SCROLL_MOMENTUM |
+                        LV_OBJ_FLAG_SCROLL_CHAIN);     /// Flags
+    lv_img_set_zoom(sleep_exit_but , 50);
+    lv_obj_set_style_bg_color(sleep_exit_but , lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(sleep_exit_but , 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+    lv_obj_set_style_img_recolor(sleep_exit_but , lv_color_hex(0x000000), LV_PART_MAIN );
+    lv_obj_set_style_img_recolor_opa(sleep_exit_but , 0, LV_PART_MAIN);
+    lv_obj_add_event_cb(sleep_exit_but , ui_sleep_return_event_cb, LV_EVENT_CLICKED, NULL); 
+
+    // 创建密码输入框 (textarea)
+    sleep_text_area = lv_textarea_create(sleep_screen);
+    lv_obj_set_size(sleep_text_area, 240, 60);  // 示例大小，适配屏幕宽
+    lv_obj_align(sleep_text_area, LV_ALIGN_TOP_MID, 0, 0);  // 上方居中
+    lv_textarea_set_placeholder_text(sleep_text_area, "Enter number");
+    lv_textarea_set_one_line(sleep_text_area, true);  // 单行
+    lv_textarea_set_password_mode(sleep_text_area, false);  // 非密码模式
+    
+    // lv_btnmatrix 0-9  del
+    static const char *btn_map[] = {
+        "7", "8", "9", "\n",
+        "4", "5", "6", "\n",
+        "1", "2", "3", "\n",
+        "0", "del", ""
+    };
+
+    sleep_keyboard = lv_btnmatrix_create(sleep_screen);
+    lv_btnmatrix_set_map(sleep_keyboard, btn_map);
+    lv_obj_set_size(sleep_keyboard, 240, 200);  // 适配屏幕，底部区域
+    lv_obj_align(sleep_keyboard, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_add_event_cb(sleep_keyboard, sleep_keyboard_event_cb, LV_EVENT_VALUE_CHANGED, sleep_text_area);  // 绑定事件，user_data 为 textarea
+
+    //ensure
+    sleep_ensure_but = lv_btn_create(sleep_screen);
+    lv_obj_set_size(sleep_ensure_but, 100, 40);
+    lv_obj_align_to(sleep_ensure_but, sleep_text_area, LV_ALIGN_OUT_BOTTOM_MID, 0, 20);
+    lv_obj_add_event_cb(sleep_ensure_but, sleep_ensure_button_click_cb, LV_EVENT_CLICKED, NULL);  // 注册回调
+    
+    lv_obj_t *label = lv_label_create(sleep_ensure_but);
+    lv_label_set_text(label, "ensure");
+    lv_obj_center(label);
+
+
+
+
+
+}
+
 void weather_pos_handler(void *arg)
 {
     _ui_screen_change(&weather_pos, LV_SCR_LOAD_ANIM_NONE, 300, 0, ui_weather_pos_screen_init);
@@ -655,6 +824,11 @@ void camera_saved_pic_handler(void *arg)
     _ui_screen_change(&camera_pic_screen, LV_SCR_LOAD_ANIM_NONE, 300, 0, ui_camera_pic_screen_init);
 }
 
+void auto_sleep_time_handler(void *arg)
+{
+    _ui_screen_change(&sleep_screen, LV_SCR_LOAD_ANIM_NONE, 300, 0, ui_sleep_screen_init);
+}
+
 
 /// @brief save intput weather position to nvs
 /// @param  
@@ -669,13 +843,30 @@ void save_custom_setting_to_nvs(void)
        return ;
     }
     nvs_set_str(handle, "weather_pos", weather_position);
+
+    nvs_set_u32(handle,"sleep_timeout",setting_sleep_time);
+
+
     nvs_commit(handle);
     nvs_close(handle);
 
-
-
-
 }
+
+void save_auto_sleep_time_to_nvs(void)
+{
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open("user", NVS_READWRITE, &handle);
+    if (err != ESP_OK) 
+    {
+       ESP_LOGE(TAG,"nvs open namespace fail ");
+       return ;
+    }
+    nvs_set_u32(handle,"sleep_timeout",setting_sleep_time);
+
+    nvs_commit(handle);
+    nvs_close(handle);
+}
+
 
 
 /// @brief 
@@ -701,6 +892,28 @@ void append_city(char *arr, size_t arr_size, const char *city)
     strcat(arr, city);
 }
 
+
+void append_sleep_time(char *arr, size_t arr_size, uint32_t data)
+{
+    const char *prefix = "auto sleep time:";
+    const char *suffix = " s";
+    size_t prefix_len = strlen(prefix);
+    size_t suffix_len = strlen(suffix);
+
+    // 计算 data 的最大字符串长度（uint32_t 最大 10 位 + 1 以防）
+    char data_str[12];
+    snprintf(data_str, sizeof(data_str), "%"PRIu32, data);
+    size_t data_len = strlen(data_str);
+
+    // 1. 确保数组够大
+    if (prefix_len + data_len + suffix_len + 1 > arr_size) {
+        printf("Error: buffer too small!\n");
+        return;
+    }
+
+    // 2. 使用 snprintf 安全格式化整个字符串
+    snprintf(arr, arr_size, "%s%"PRIu32"%s", prefix, data, suffix);
+}
 
 
 void get_ram_use(void)

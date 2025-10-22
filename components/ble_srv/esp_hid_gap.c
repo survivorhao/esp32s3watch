@@ -26,7 +26,7 @@
 #endif
 
 
-#include "event.h"
+#include "custom_event.h"
 
 static const char *TAG = "ESP_HID_GAP";
 

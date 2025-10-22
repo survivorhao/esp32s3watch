@@ -16,12 +16,13 @@ extern "C" {
 #include "ui_events.h"
 #include "ui_theme_manager.h"
 #include "ui_themes.h"
-#include "event.h"
+#include "custom_event.h"
 #include "esp_heap_caps.h"
 #include <string.h>
 #include "nvs_flash.h"
 #include "esp_err.h"
 #include <stdint.h>
+#include <inttypes.h>
 #include "time_srv.h"
 #include "sdcard.h"
 #include "esp_err.h"

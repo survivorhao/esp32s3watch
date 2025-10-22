@@ -46,6 +46,7 @@ The architecture emphasizes modularity and scalability:
 
 2. **The environment setup is too complicated. Can I just flash the program to my LCSC-boards LCKFB-SZPI-ESP32-S3-VA board to test it?**  
    Yes! Open the `/bin/flash_project_args` text file, which defines the download parameters, and enter them sequentially into the official flash download tool. refer to [flash arguement configure](asset/flash_download.png)
+   
    [https://docs.espressif.com/projects/esp-test-tools/zh_CN/latest/esp32s3/production_stage/tools/flash_download_tool.html](https://docs.espressif.com/projects/esp-test-tools/zh_CN/latest/esp32s3/production_stage/tools/flash_download_tool.html)
 
 ## Resources

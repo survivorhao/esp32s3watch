@@ -9,7 +9,7 @@
 #include    "esp_sleep.h"
 #include    "esp_pm.h"
 #include    "driver/gpio.h"
-
+#include    "freertos/timers.h"
 
 
 
@@ -20,7 +20,7 @@
 #include    "camera.h"
 #include    "my_ui.h"
 #include    "ui.h"
-#include    "event.h"
+#include    "custom_event.h"
 #include    "wifi_connect.h"
 #include    "time_srv.h"
 #include    "weather_srv.h"
@@ -59,6 +59,7 @@ void nvs_set_camera_frame_sequence(void);
 //init http client weatehr position 
 void nvs_weather_position_init(void);
 
+void nvs_auto_sleep_timeout_init(void);
 
 //----------------------------------------------------------------------------------------------------------------------------
 //----------------------------------------------------------------------------------------------------------------------------
@@ -124,6 +125,8 @@ void app_main(void)
     // Register BLE/HID service handlers so BLE features are available.
     ble_register_srv_handler();
 
+    auto_deep_sleep_init();
+
     // Initialize and show the initial LVGL UI screens/widgets.
     app_lvgl_display();
 
@@ -134,6 +137,7 @@ void app_main(void)
     // Create and pin the UI task on core 1; it runs LVGL handling and
     // processes UI-related events with higher priority.
     xTaskCreatePinnedToCore(my_ui_task,"my_ui_task",8192,NULL,4,NULL,1 );
+    
     
 
     
@@ -157,6 +161,8 @@ void nvs_user_data_init(void)
     nvs_set_camera_frame_sequence();
 
     nvs_weather_position_init();
+
+    nvs_auto_sleep_timeout_init();
 
 }
 
@@ -236,3 +242,38 @@ void nvs_weather_position_init(void)
 
 }
 
+
+/// @brief read or write auto sleep time configuration in nvs
+/// @param  
+void nvs_auto_sleep_timeout_init(void)
+{
+
+    nvs_handle_t handle;
+    esp_err_t err = nvs_open("user", NVS_READWRITE, &handle);
+    if (err != ESP_OK) 
+    {
+       ESP_LOGE(TAG,"nvs open namespace fail ");
+       return ;
+    }
+
+    err = nvs_get_u32(handle, "sleep_timeout", &auto_deep_sleep_timer_timeout_s);
+    if (err == ESP_ERR_NVS_NOT_FOUND) 
+    {
+        // The key does not exist, write the initial value 60s
+        nvs_set_u32(handle, "sleep_timeout", 30);
+        auto_deep_sleep_timer_timeout_s=30;
+        nvs_commit(handle);
+
+    }else if (err == ESP_OK) 
+    {
+
+        
+    }else 
+    {
+        ESP_LOGE(TAG,"nvs namespace read specific key fail ");
+        return ;
+    }
+
+    nvs_close(handle);
+
+}

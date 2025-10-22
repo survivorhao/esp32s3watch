@@ -14,6 +14,8 @@
 #include "esp_err.h"
 
 
+//32bit
+extern TickType_t  auto_deep_sleep_timer_timeout_s;
 
 extern esp_event_loop_handle_t   ui_event_loop_handle;
 
@@ -79,6 +81,10 @@ enum{
 
 };
 
+void auto_deep_sleep_init(void);
+void auto_deep_sleep_timer_reset(void);
+void auto_deep_sleep_timer_change(TickType_t period_s);
+uint32_t auto_sleep_time_get(void);
 
 
 // Define the Wi-Fi list data used for passing in events

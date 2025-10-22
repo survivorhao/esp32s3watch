@@ -15,7 +15,7 @@
 
 #include    "sdcard.h"
 #include    "bsp_driver.h"
-#include    "event.h"
+#include    "custom_event.h"
 #include    "ui.h"
 #include    "camera.h"
 //----------------------------------------------------------------------------------------------------------------------------
