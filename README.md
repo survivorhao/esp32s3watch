@@ -15,14 +15,14 @@ The architecture emphasizes modularity and scalability:
 
 ## Features
 
-- **WiFi Management**: Supports enabling/disabling, scanning, and connecting to networks. Upon obtaining an IP address, it automatically sends an SNTP request to sync time to the local RTC. It also fetches weather data via HTTPS (China region only) and updates the UI accordingly.
-- **BLE HID Device**: Implements standard HID protocol over BLE GATT. Displays pairing PIN on screen; after encrypted connection, controls volume up/down, song next/previous, play/pause.
-- **SD Card File Browser**: Reads and displays SD card contents using LVGL widget lists. Supports directory navigation and BMP image viewing.
-- **Camera Integration**: Drives GC0308 camera for real-time preview on SPI LCD. Captures photos (press BOOT0 button) and saves as BMP to SD card.
-- **Simple Calculator**: Uses dual stacks (one for operators, one for operands) to handle basic arithmetic (+, -, *, /) with parentheses, supporting nested expressions like "(1*((6+2)/4)-6)".
-- **Settings Interface**: Configures system options, such as weather API location, screen brightness adjustment, internal RAM and PSRAM usage monitoring (if enabled), and SD card info (mount status and capacity).
-- **Calendar and Canvas**: Basic calendar view and simple drawing canvas.
-- **Deep Sleep Mode**: Retains only RTC power domain; RTC clock continues running. Upon wake-up, UI time resumes without resyncing via SNTP.
+- **WiFi Management**: Supports enabling/disabling, scanning, and connecting to networks. After obtaining an IP address, it automatically sends an SNTP request to synchronize time with the local RTC. Concurrently, it fetches weather data via HTTPS (China region only) and updates the UI.
+- **BLE HID Device**: Implements the standard HID protocol through BLE GATT. Displays the pairing PIN code on the screen; after encrypted connection, enables volume up/down, song skipping, and play/pause control.
+- **SD Card File Browser**: Reads and uses LVGL list widgets to display SD card contents. Supports directory switching and BMP image viewing.
+- **Camera Integration**: Drives the GC0308 camera to provide real-time preview on the SPI LCD. Supports taking photos (by pressing the BOOT0 button) and saving them in BMP format to a specified directory on the SD card.
+- **Simple Calculator**: Uses a dual-stack approach (operator stack and operand stack) to handle basic arithmetic operations: +, -, *, /, and parentheses, supporting multi-level nested expressions such as "(1*((6+2)/4)-6)".
+- **Settings Interface**: Configures system options such as weather API location, screen brightness adjustment, monitoring of internal RAM and PSRAM usage (if enabled), SD card information (mount status and capacity), configuration of automatic sleep time, and deletion of camera-saved pictures.
+- **Calendar and Canvas**: Provides a basic calendar view and a simple drawing canvas.
+- **Deep Sleep Mode**: Automatically enters deep sleep mode after a specified period of no touch events, retaining only the RTC power domain; the RTC clock continues running. Upon wake-up, the UI time is correct, eliminating the need for re-synchronization via SNTP.
 
 ## Limitations
 
